@@ -8,7 +8,7 @@ use ringbuf::traits::*;
 use ringbuf::{ HeapCons, HeapProd, HeapRb };
 use rodio::Source;
 
-use symphonia::core::audio::{ Layout, SampleBuffer };
+use symphonia::core::audio::SampleBuffer;
 use symphonia::core::codecs::{ CodecRegistry, Decoder, DecoderOptions };
 use symphonia::core::conv::ConvertibleSample;
 use symphonia::core::formats::{ FormatOptions, FormatReader, SeekMode, SeekTo };

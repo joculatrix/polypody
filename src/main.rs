@@ -94,7 +94,7 @@ impl App {
                 for track in &self.queue {
                     let track = self.library.get_track(*track).unwrap();
                     self.sink.append(
-                        internal::audio::output::AudioStream::new(
+                        internal::audio::AudioStream::new(
                             &track.path,
                             self.codec_registry,
                             self.probe,
