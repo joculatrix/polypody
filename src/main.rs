@@ -90,6 +90,7 @@ impl App {
                     .copy_from_slice(
                         &self.library.current_directory().tracks
                     );
+                self.sink.stop();
                 for track in &self.queue {
                     let track = self.library.get_track(*track).unwrap();
                     self.sink.append(
@@ -114,6 +115,7 @@ impl App {
                 for (i, j) in shuffle.into_iter().enumerate() {
                     self.queue[i] = tracks[j];
                 }
+                self.sink.stop();
                 for track in &self.queue {
                     let track = self.library.get_track(*track).unwrap();
                     self.sink.append(
