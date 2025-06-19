@@ -10,17 +10,20 @@ hound = "3.5.1"
 iced = { version = "0.13.1", features = [ "advanced", "image" ] }
 id3 = "1.16.3"
 lewton = "0.10.2"
+mp3-duration = "0.1.10"
 rand = "0.9.1"
 ringbuf = "0.4.8"
-rodio = { version = "0.20.1", default-features = false, features = [ "mp3" ] }
-rubato = "0.16.2"
 tokio = { version = "1.45.1", features = ["full"] }
 xxhash-rust = { version = "0.8.15", features = ["xxh3"] }
 
-[dependencies.interflow]
-git = "https://github.com/SolarLiner/interflow"
-version = "0.1.0"
-features = [ "pipewire" ]
+[dependencies.rodio]
+version = "0.20.1"
+default-features = false
+
+[dependencies.symphonia]
+version = "0.5.4"
+default-features = false
+features = [ "adpcm", "flac", "mp3", "ogg", "pcm", "vorbis", "wav" ]
 
 [dev-dependencies]
 paste = "1.0.15"

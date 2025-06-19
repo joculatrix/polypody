@@ -120,6 +120,9 @@ fn scan_mp3(path: &PathBuf) -> Track {
         .unwrap_or(read_ape(path)
             .unwrap_or(Metadata::default()));
 
+    let duration = mp3_duration::from_read(&mut File::open(path).unwrap()).ok();
+    let metadata = Metadata { duration, ..metadata };
+
     Track { path: path.to_owned(), audio_type: AudioType::Mp3, metadata }
 }
 
@@ -220,8 +223,15 @@ fn get_vorbis_duration(path: &PathBuf) -> Option<u32> {
 }
 
 fn scan_wav(path: &PathBuf) -> Track {
-    let metadata = read_id3(path)
+    let mut metadata = read_id3(path)
         .unwrap_or(Metadata::default());
+
+    if metadata.duration.is_none() {
+        let reader = hound::WavReader::open(path).unwrap();
+        let duration = Some(Duration::from_secs(
+            reader.duration() as u64 / reader.spec().sample_rate as u64));
+        metadata = Metadata { duration, ..metadata };
+    }
 
     Track { path: path.to_owned(), audio_type: AudioType::Wav, metadata }
 }
@@ -237,16 +247,18 @@ fn read_id3(path: &PathBuf) -> Option<Metadata> {
                 .unwrap_or(vec![]);
             let album = tag.album().map(|s| s.to_owned());
             let num = tag.track().map(|n| n.try_into().unwrap_or(0));
+            let duration = tag.track().map(|s| Duration::from_secs(s as u64));
 
             if title.is_none()
                 && artists.is_empty()
                 && album.is_none()
                 && num.is_none()
+                && duration.is_none()
             {
                 return None;
             }
 
-            Some(Metadata { title, artists, album, num, duration: todo!() })
+            Some(Metadata { title, artists, album, num, duration })
         }
         Err(_) => None,
     }
@@ -270,7 +282,7 @@ fn read_ape(path: &PathBuf) -> Option<Metadata> {
                         .unwrap_or(0)
                 );
 
-            Some(Metadata { title, artists, album, num, duration: todo!() })
+            Some(Metadata { title, artists, album, num, duration: None })
         }
         Err(_) => None,
     }

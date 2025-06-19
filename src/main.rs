@@ -5,6 +5,8 @@
 
 use internal::Directory;
 use internal::library::Library;
+use symphonia::core::codecs::CodecRegistry;
+use symphonia::core::probe::Probe;
 
 mod internal;
 mod view;
@@ -43,6 +45,10 @@ enum RepeatStatus {
 }
 
 struct App {
+    codec_registry: &'static CodecRegistry,
+    probe: &'static Probe,
+
+    sink: rodio::Sink,
     library: Library,
 
     queue: Vec<u64>,
@@ -54,13 +60,18 @@ struct App {
     volume: f32,
 }
 
-impl Default for App {
-    fn default() -> Self {
+impl App {
+    fn new(stream_handle: rodio::OutputStreamHandle) -> Self {
         let library = internal::scan(
             "/mnt/741ae10f-7ba3-487d-bc13-3953cbb02819/music".into(),
         );
 
+        let sink = rodio::Sink::try_new(&stream_handle).unwrap();
+
         Self {
+            codec_registry: symphonia::default::get_codecs(),
+            probe: symphonia::default::get_probe(),
+            sink,
             library,
             queue: vec![],
             play_status: PlayStatus::Stopped,
@@ -69,9 +80,7 @@ impl Default for App {
             volume: 1.0,
         }
     }
-}
 
-impl App {
     fn update(&mut self, message: Message) {
         match message {
             Message::PlayFolder => {
@@ -81,7 +90,18 @@ impl App {
                     .copy_from_slice(
                         &self.library.current_directory().tracks
                     );
-                // TODO: start playing first track in new queue
+                for track in &self.queue {
+                    let track = self.library.get_track(*track).unwrap();
+                    self.sink.append(
+                        internal::audio::output::AudioStream::new(
+                            &track.path,
+                            self.codec_registry,
+                            self.probe,
+                            track.metadata.duration.unwrap()
+                        ));
+                }
+                self.sink.play();
+                self.play_status = PlayStatus::Play;
             }
             Message::ShuffleFolder => {
                 use rand::{ rng, seq::SliceRandom };
@@ -94,20 +114,42 @@ impl App {
                 for (i, j) in shuffle.into_iter().enumerate() {
                     self.queue[i] = tracks[j];
                 }
-                // TODO: start playing first track in new queue
+                for track in &self.queue {
+                    let track = self.library.get_track(*track).unwrap();
+                    self.sink.append(
+                        internal::audio::output::AudioStream::new(
+                            &track.path,
+                            self.codec_registry,
+                            self.probe,
+                            track.metadata.duration.unwrap()
+                        ));
+                }
+                self.sink.play();
+                self.play_status = PlayStatus::Play;
             }
             Message::Stop => {
                 self.play_status = PlayStatus::Stopped;
                 self.queue.clear();
-                // TODO: stop playback
+                self.sink.stop();
             }
             Message::ToggleMute => {
                 self.mute = !self.mute;
+                if self.mute {
+                    self.sink.set_volume(0.0);
+                } else {
+                    self.sink.set_volume(self.volume);
+                }
             }
             Message::TogglePlay => {
                 self.play_status = match self.play_status {
-                    PlayStatus::Play => PlayStatus::Pause,
-                    PlayStatus::Pause | PlayStatus::Stopped => PlayStatus::Play,
+                    PlayStatus::Play => {
+                        self.sink.pause();
+                        PlayStatus::Pause
+                    }
+                    PlayStatus::Pause | PlayStatus::Stopped => {
+                        self.sink.play();
+                        PlayStatus::Play
+                    }
                 };
             },
             Message::ToggleRepeat => {
@@ -122,17 +164,23 @@ impl App {
             }
             Message::VolumeChanged(val) => {
                 self.volume = val;
+                self.sink.set_volume(val);
             }
             _ => (),
         }
     }
 }
 
-fn main() -> iced::Result {
+#[tokio::main]
+async fn main() -> iced::Result {
+    let (_stream, stream_handle) = rodio::OutputStream::try_default().unwrap();
+
     iced::application("Music player", App::update, App::view)
         .font(view::ICON_FONT_BYTES)
         .theme(theme)
-        .run()
+        .run_with(|| {
+            (App::new(stream_handle), iced::Task::none())
+        })
 }
 
 fn theme(_state: &App) -> iced::Theme {
