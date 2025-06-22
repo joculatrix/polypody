@@ -104,6 +104,7 @@ impl App {
             .duration
             .as_ref()
             .map(|total| (Duration::from_secs(0), *total));
+        self.sink.stop();
         self.sink.append(
             internal::audio::AudioStream::new(
                 &track.path,
@@ -120,6 +121,7 @@ impl App {
         self.sink.stop();
         self.playing = None;
         self.track_duration = None;
+        self.play_status = PlayStatus::Stopped;
     }
 
     fn update(&mut self, message: Message) {
@@ -166,6 +168,47 @@ impl App {
                 }
                 self.stop();
                 self.play_next();
+            }
+            Message::SkipBack => {
+                let Some(playing) = &self.playing else {
+                    return;
+                };
+                match self.repeat {
+                    RepeatStatus::None | RepeatStatus::One => {
+                        self.sink.try_seek(Duration::from_secs(0));
+                    }
+                    RepeatStatus::All => {
+                        let Some((current, _)) = &self.track_duration else {
+                            return;
+                        };
+                        if current.as_secs() <= 1 && !self.queue.is_empty() {
+                            self.queue.insert(0, track_hash(playing));
+                            let last = unsafe {
+                                self.queue.last().unwrap_unchecked()
+                            };
+                            self.queue.insert(0, *last);
+                            self.play_next();
+                        } else {
+                            self.sink.try_seek(Duration::from_secs(0));
+                        }
+                    }
+                }
+            }
+            Message::SkipForward => {
+                let Some(playing) = &self.playing else {
+                    return;
+                };
+                match self.repeat {
+                    RepeatStatus::All => {
+                        self.queue.push(track_hash(playing));
+                    }
+                    _ => (),
+                }
+                if !self.queue.is_empty() {
+                    self.play_next();
+                } else {
+                    self.stop();
+                }
             }
             Message::Stop => {
                 self.play_status = PlayStatus::Stopped;
