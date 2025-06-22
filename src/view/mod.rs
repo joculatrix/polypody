@@ -110,16 +110,36 @@ impl App {
         container(
             column![
                 self.library_view(),
+                text!("{}", self.playing.as_ref()
+                    .map(|track| {
+                        match &track.metadata.title {
+                            Some(title) => title,
+                            None => track.path
+                                .file_name().unwrap()
+                                .to_str().unwrap(),
+                        }
+                    }).unwrap_or("")
+                )
+                    .size(14)
+                    .center(),
+                text!("{}", self.playing.as_ref()
+                    .map_or(
+                        String::from(""),
+                        |track| print_artists(&track.metadata.artists)
+                    )
+                )
+                    .size(14)
+                    .center(),
                 row![
                     iced::widget::Space::with_width(iced::Length::Fill),
-                    fill![text!("{}", print_duration(&current_time)).center()]
+                    fill![text!("{}", print_duration(&current_time)).size(12).center()]
                         .align_x(iced::Alignment::Center)
                         .align_y(iced::Alignment::Center),
                     slider(0.0..=1.0, slider_pos, Message::PlayheadMoved)
                         .style(style::clean_slider)
                         .width(iced::Length::FillPortion(16)),
                     fill![
-                        text!("{}", print_duration(&total_duration)).center()
+                        text!("{}", print_duration(&total_duration)).size(12).center()
                     ]
                         .align_x(iced::Alignment::Center)
                         .align_y(iced::Alignment::Center),
@@ -278,6 +298,19 @@ impl App {
             .padding(5)
             .into()
     }
+}
+
+fn print_artists(artists: &Vec<String>) -> String {
+    let mut txt = String::new();
+
+    for artist in artists {
+        txt.push_str(&format!("{}, ", artist));
+    }
+
+    txt.pop();
+    txt.pop();
+
+    txt
 }
 
 fn print_duration(duration: &std::time::Duration) -> String {

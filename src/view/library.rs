@@ -81,16 +81,7 @@ impl App {
                     if track.metadata.artists.is_empty() {
                         text!("")
                     } else {
-                        let mut txt = String::new();
-
-                        for artist in &track.metadata.artists {
-                            txt.push_str(&format!("{}, ", artist));
-                        }
-
-                        txt.pop();
-                        txt.pop();
-
-                        text!("{}", txt)
+                        text!("{}", print_artists(&track.metadata.artists))
                     }
                         .size(14)
                         .align_x(iced::Alignment::Start)
