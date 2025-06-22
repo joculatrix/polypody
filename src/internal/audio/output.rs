@@ -74,7 +74,7 @@ impl AudioStream {
         let (tcx, rcx) = mpsc::channel(16);
 
         let sample_format = codec_params.sample_format
-            .unwrap_or_else(|| match codec_params.bits_per_sample.unwrap() {
+            .unwrap_or_else(|| match codec_params.bits_per_sample.unwrap_or(32) {
                 8  => SampleFormat::S8,
                 16 => SampleFormat::S16,
                 24 => SampleFormat::S24,
