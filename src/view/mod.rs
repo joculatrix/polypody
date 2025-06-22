@@ -213,6 +213,7 @@ impl App {
             RepeatStatus::One => "Track",
             RepeatStatus::All => "All",
         })
+            .size(14)
             .style(move |theme: &iced::Theme| {
                 let palette = theme.extended_palette();
 

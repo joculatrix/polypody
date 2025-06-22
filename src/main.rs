@@ -4,7 +4,7 @@
 #![feature(slice_as_array)]
 
 use internal::Track;
-use internal::library::Library;
+use internal::library::{track_hash, Library};
 use std::time::Duration;
 use symphonia::core::codecs::CodecRegistry;
 use symphonia::core::probe::Probe;
@@ -175,16 +175,7 @@ impl App {
                 };
             },
             Message::UpdateProgress => {
-                if self.sink.empty() {
-                    if self.queue.len() != 0 {
-                        self.play_next();
-                    }
-                } else {
-                    self.track_duration = Some(
-                        (self.sink.get_pos(),
-                            self.playing.as_ref().unwrap().metadata.duration.unwrap())
-                    );
-                }
+                self.update_progress();
             }
             Message::ViewLibrary(id) => {
                 self.library.set_current(id); 
@@ -197,7 +188,30 @@ impl App {
         }
     }
 
-    fn update_timestamp(&self) -> iced::Subscription<Message> {
+    fn update_progress(&mut self) {
+        if self.sink.empty() {
+            if let Some(playing) = &self.playing {
+                let last = track_hash(playing);
+                match self.repeat {
+                    RepeatStatus::One => self.queue.insert(0, last),
+                    RepeatStatus::All => self.queue.push(last),
+                    RepeatStatus::None => (),
+                }
+            }
+            self.playing = None;
+            if self.queue.len() != 0 {
+                self.play_next();
+            }
+        } else {
+            let Some(playing) = &self.playing else {
+                return; // prevent race conditions
+            };
+            self.track_duration =
+                Some((self.sink.get_pos(), playing.metadata.duration.unwrap()));
+        }
+    }
+
+    fn progress_subscription(&self) -> iced::Subscription<Message> {
         iced::time::every(Duration::from_millis(10))
             .map(|_| Message::UpdateProgress)
     }
@@ -210,7 +224,7 @@ async fn main() -> iced::Result {
     iced::application("Music player", App::update, App::view)
         .font(view::ICON_FONT_BYTES)
         .theme(theme)
-        .subscription(App::update_timestamp)
+        .subscription(App::progress_subscription)
         .run_with(|| {
             (App::new(stream_handle), iced::Task::none())
         })
