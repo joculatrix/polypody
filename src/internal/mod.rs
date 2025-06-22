@@ -98,7 +98,7 @@ fn scan_flac(path: &PathBuf) -> Track {
     let artists = reader.get_tag("ARTIST").map(|s| s.to_owned()).collect();
     let album = reader.get_tag("ALBUM").next().map(|s| s.to_owned());
     let num = reader.get_tag("TRACKNUMBER")
-        .map(|n| n.parse::<usize>().unwrap_or(0))
+        .map(|s| s.split('/').nth(0).unwrap().parse::<usize>().unwrap_or(0))
         .next();
     let duration = {
         let stream_info = reader.streaminfo();
@@ -157,7 +157,7 @@ fn scan_vorbis(path: &PathBuf) -> Track {
                 album = Some(value);
             }
             "TRACKNUMBER" => {
-                num = Some(value.parse::<usize>().unwrap_or(0));
+                num = Some(value.split('/').nth(0).unwrap().parse::<usize>().unwrap_or(0))
             }
             _ => (),
         }
