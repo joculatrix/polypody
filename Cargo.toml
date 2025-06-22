@@ -15,7 +15,7 @@ ringbuf = "0.4.8"
 
 [dependencies.iced]
 version = "0.13.1"
-features = [ "advanced", "image" ]
+features = [ "advanced", "image", "tokio" ]
 
 [dependencies.rodio]
 version = "0.20.1"

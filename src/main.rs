@@ -3,8 +3,9 @@
 #![feature(seek_stream_len)]
 #![feature(slice_as_array)]
 
-use internal::Directory;
+use internal::Track;
 use internal::library::Library;
+use std::time::Duration;
 use symphonia::core::codecs::CodecRegistry;
 use symphonia::core::probe::Probe;
 
@@ -24,6 +25,7 @@ enum Message {
     ToggleMute,
     TogglePlay,
     ToggleRepeat,
+    UpdateProgress,
     ViewLibrary(u64),
     VolumeChanged(f32),
 }
@@ -51,10 +53,14 @@ struct App {
     sink: rodio::Sink,
     library: Library,
 
+    playing: Option<Track>,
     queue: Vec<u64>,
 
     play_status: PlayStatus,
     repeat: RepeatStatus,
+    /// If a track is playing, this stores the current timestamp as well as the
+    /// total duration of the track.
+    track_duration: Option<(Duration, Duration)>,
 
     mute: bool,
     volume: f32,
@@ -73,12 +79,40 @@ impl App {
             probe: symphonia::default::get_probe(),
             sink,
             library,
+            playing: None,
             queue: vec![],
             play_status: PlayStatus::Stopped,
             repeat: RepeatStatus::None,
+            track_duration: None,
             mute: false,
             volume: 1.0,
         }
+    }
+
+    fn play_next(&mut self) {
+        let track = self.queue.remove(0);
+        let track = self.library.get_track(track).unwrap();
+        self.playing = Some(track.clone());
+        self.track_duration = track.metadata
+            .duration
+            .as_ref()
+            .map(|total| (Duration::from_secs(0), *total));
+        self.sink.append(
+            internal::audio::AudioStream::new(
+                &track.path,
+                self.codec_registry,
+                self.probe,
+                track.metadata.duration.unwrap(),
+            )
+        );
+        self.sink.play();
+        self.play_status = PlayStatus::Play;
+    }
+
+    fn stop(&mut self) {
+        self.sink.stop();
+        self.playing = None;
+        self.track_duration = None;
     }
 
     fn update(&mut self, message: Message) {
@@ -90,19 +124,8 @@ impl App {
                     .copy_from_slice(
                         &self.library.current_directory().tracks
                     );
-                self.sink.stop();
-                for track in &self.queue {
-                    let track = self.library.get_track(*track).unwrap();
-                    self.sink.append(
-                        internal::audio::AudioStream::new(
-                            &track.path,
-                            self.codec_registry,
-                            self.probe,
-                            track.metadata.duration.unwrap()
-                        ));
-                }
-                self.sink.play();
-                self.play_status = PlayStatus::Play;
+                self.stop();
+                self.play_next();
             }
             Message::ShuffleFolder => {
                 use rand::{ rng, seq::SliceRandom };
@@ -115,24 +138,13 @@ impl App {
                 for (i, j) in shuffle.into_iter().enumerate() {
                     self.queue[i] = tracks[j];
                 }
-                self.sink.stop();
-                for track in &self.queue {
-                    let track = self.library.get_track(*track).unwrap();
-                    self.sink.append(
-                        internal::audio::output::AudioStream::new(
-                            &track.path,
-                            self.codec_registry,
-                            self.probe,
-                            track.metadata.duration.unwrap()
-                        ));
-                }
-                self.sink.play();
-                self.play_status = PlayStatus::Play;
+                self.stop();
+                self.play_next();
             }
             Message::Stop => {
                 self.play_status = PlayStatus::Stopped;
                 self.queue.clear();
-                self.sink.stop();
+                self.stop();
             }
             Message::ToggleMute => {
                 self.mute = !self.mute;
@@ -161,6 +173,18 @@ impl App {
                     RepeatStatus::All => RepeatStatus::None,
                 };
             },
+            Message::UpdateProgress => {
+                if self.sink.empty() {
+                    if self.queue.len() != 0 {
+                        self.play_next();
+                    }
+                } else {
+                    self.track_duration = Some(
+                        (self.sink.get_pos(),
+                            self.playing.as_ref().unwrap().metadata.duration.unwrap())
+                    );
+                }
+            }
             Message::ViewLibrary(id) => {
                 self.library.set_current(id); 
             }
@@ -171,6 +195,11 @@ impl App {
             _ => (),
         }
     }
+
+    fn update_timestamp(&self) -> iced::Subscription<Message> {
+        iced::time::every(Duration::from_millis(10))
+            .map(|_| Message::UpdateProgress)
+    }
 }
 
 #[tokio::main]
@@ -180,6 +209,7 @@ async fn main() -> iced::Result {
     iced::application("Music player", App::update, App::view)
         .font(view::ICON_FONT_BYTES)
         .theme(theme)
+        .subscription(App::update_timestamp)
         .run_with(|| {
             (App::new(stream_handle), iced::Task::none())
         })

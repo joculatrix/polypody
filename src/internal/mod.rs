@@ -29,7 +29,7 @@ impl Directory {
     }
 }
 
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 pub enum AudioType {
     Flac,
     Mp3,
@@ -37,14 +37,14 @@ pub enum AudioType {
     Wav,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Track {
     pub path: PathBuf,
     pub audio_type: AudioType,
     pub metadata: Metadata,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Metadata {
     pub title: Option<String>,
     pub artists: Vec<String>,
