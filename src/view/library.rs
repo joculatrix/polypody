@@ -206,7 +206,7 @@ impl App {
             .into_iter()
             .map(|dir| Self::library_subdir_view(dir));
 
-        let mut tracks = dir
+        let tracks = dir
             .tracks
             .iter()
             .map(|id| unsafe {
@@ -214,18 +214,7 @@ impl App {
             })
             .collect::<Vec<_>>();    
 
-        let mut num = false;
-
-        if tracks.iter().all(|t| t.metadata.num.is_some()) {
-            tracks.sort_by_key(|track| unsafe {
-                track.metadata.num.unwrap_unchecked()
-            });
-            num = true;
-        } else {
-            tracks.sort_by_key(|track|
-                track.path.file_name().unwrap()
-            );
-        }
+        let num = tracks.iter().all(|t| t.metadata.num.is_some());
 
         let track_items = tracks
             .into_iter()

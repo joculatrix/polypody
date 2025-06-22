@@ -293,6 +293,7 @@ fn scan_dir(lib: &mut Library, path: PathBuf) -> Option<u64> {
     assert!(path.is_dir());
 
     let mut dir = Directory::new(path.to_owned());
+    let mut tracks_temp = vec![];
 
     for entry in path.read_dir().unwrap().into_iter() {
         if let Err(e) = entry {
@@ -332,7 +333,7 @@ fn scan_dir(lib: &mut Library, path: PathBuf) -> Option<u64> {
                                 }
                             }
                             Some(ScanResult::Track(track)) => {
-                                dir.tracks.push(lib.add_track(track));
+                                tracks_temp.push(track);
                             }
                             None => (),
                         }
@@ -342,6 +343,12 @@ fn scan_dir(lib: &mut Library, path: PathBuf) -> Option<u64> {
             }
         }
     }
+
+    tracks_temp.sort_unstable_by_key(|track|
+        (track.metadata.num, track.metadata.title.clone(), track.path.clone()));
+    dir.tracks = tracks_temp.into_iter()
+        .map(|track| lib.add_track(track))
+        .collect();
 
     if dir.subdirs.is_empty() && dir.tracks.is_empty() {
         None
