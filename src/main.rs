@@ -155,6 +155,11 @@ impl App {
             Message::PlayheadReleased => {
                 self.seeking = false;
             }
+            Message::Shuffle => {
+                use rand::{ rng, seq::SliceRandom };
+
+                self.queue.shuffle(&mut rng());
+            }
             Message::ShuffleFolder => {
                 use rand::{ rng, seq::SliceRandom };
 
