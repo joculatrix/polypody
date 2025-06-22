@@ -73,6 +73,7 @@ impl App {
         );
 
         let sink = rodio::Sink::try_new(&stream_handle).unwrap();
+        sink.set_volume(0.5);
 
         Self {
             codec_registry: symphonia::default::get_codecs(),
@@ -85,7 +86,7 @@ impl App {
             repeat: RepeatStatus::None,
             track_duration: None,
             mute: false,
-            volume: 1.0,
+            volume: 0.5,
         }
     }
 
