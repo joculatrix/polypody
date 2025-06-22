@@ -101,11 +101,10 @@ pub(self) use list_item;
 
 impl App {
     pub fn view (&self) -> iced::Element<Message> {
-        let (current_time, total_duration, slider_pos) = match self.track_duration {
-            Some((current, total)) =>
-                (current, total, current.as_secs_f32() / total.as_secs_f32()),
+        let (current_time, total_duration) = match self.track_duration {
+            Some((current, total)) => (current, total),
             None =>
-                (Duration::from_secs(0), Duration::from_secs(0), 0.5),
+                (Duration::from_secs(0), Duration::from_secs(0)),
         };
         container(
             column![
@@ -135,7 +134,9 @@ impl App {
                     fill![text!("{}", print_duration(&current_time)).size(12).center()]
                         .align_x(iced::Alignment::Center)
                         .align_y(iced::Alignment::Center),
-                    slider(0.0..=1.0, slider_pos, Message::PlayheadMoved)
+                    slider(0.0..=1.0, self.playhead_position, Message::PlayheadMoved)
+                        .on_release(Message::PlayheadReleased)
+                        .step(0.01)
                         .style(style::clean_slider)
                         .width(iced::Length::FillPortion(16)),
                     fill![

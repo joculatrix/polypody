@@ -17,6 +17,7 @@ enum Message {
     Dummy,
     PlayFolder,
     PlayheadMoved(f32),
+    PlayheadReleased,
     Shuffle,
     ShuffleFolder,
     SkipBack,
@@ -58,6 +59,8 @@ struct App {
 
     play_status: PlayStatus,
     repeat: RepeatStatus,
+    playhead_position: f32,
+    seeking: bool,
     /// If a track is playing, this stores the current timestamp as well as the
     /// total duration of the track.
     track_duration: Option<(Duration, Duration)>,
@@ -82,6 +85,8 @@ impl App {
             library,
             playing: None,
             queue: vec![],
+            playhead_position: 0.0,
+            seeking: false,
             play_status: PlayStatus::Stopped,
             repeat: RepeatStatus::None,
             track_duration: None,
@@ -94,6 +99,7 @@ impl App {
         let track = self.queue.remove(0);
         let track = self.library.get_track(track).unwrap();
         self.playing = Some(track.clone());
+        self.playhead_position = 0.0;
         self.track_duration = track.metadata
             .duration
             .as_ref()
@@ -127,6 +133,25 @@ impl App {
                     );
                 self.stop();
                 self.play_next();
+            }
+            Message::PlayheadMoved(val) => {
+                self.playhead_position = val;
+                self.seeking = true;
+
+                let Some(playing) = &self.playing else {
+                    return;
+                };
+
+                let Some((_, duration)) = &self.track_duration else {
+                    return;
+                };
+
+                let seek_pos = Duration::from_secs(
+                    (val * duration.as_secs_f32()) as u64);
+                self.sink.try_seek(seek_pos);
+            }
+            Message::PlayheadReleased => {
+                self.seeking = false;
             }
             Message::ShuffleFolder => {
                 use rand::{ rng, seq::SliceRandom };
@@ -201,13 +226,20 @@ impl App {
             self.playing = None;
             if self.queue.len() != 0 {
                 self.play_next();
+            } else {
+                self.playhead_position = 0.0;
             }
         } else {
             let Some(playing) = &self.playing else {
                 return; // prevent race conditions
             };
-            self.track_duration =
-                Some((self.sink.get_pos(), playing.metadata.duration.unwrap()));
+            let sink_pos = self.sink.get_pos();
+            let duration = playing.metadata.duration.unwrap();
+            self.track_duration = Some((sink_pos, duration));
+            if !self.seeking {
+                self.playhead_position =
+                    sink_pos.as_secs_f32() / duration.as_secs_f32();
+            }
         }
     }
 
