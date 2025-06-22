@@ -49,13 +49,14 @@ pub struct Metadata {
     pub title: Option<String>,
     pub artists: Vec<String>,
     pub album: Option<String>,
+    pub discnum: Option<usize>,
     pub num: Option<usize>,
     pub duration: Option<Duration>,
 }
 
 impl Default for Metadata {
     fn default() -> Self {
-        Self { title: None, artists: vec![], album: None, num: None, duration: None }
+        Self { title: None, artists: vec![], album: None, discnum: None, num: None, duration: None }
     }
 }
 
@@ -97,9 +98,12 @@ fn scan_flac(path: &PathBuf) -> Track {
     let title = reader.get_tag("TITLE").next().map(|s| s.to_owned());
     let artists = reader.get_tag("ARTIST").map(|s| s.to_owned()).collect();
     let album = reader.get_tag("ALBUM").next().map(|s| s.to_owned());
+    let discnum = reader.get_tag("DISCNUMBER")
+        .next()
+        .map(|s| s.split('/').nth(0).unwrap().parse::<usize>().unwrap_or(0));
     let num = reader.get_tag("TRACKNUMBER")
-        .map(|s| s.split('/').nth(0).unwrap().parse::<usize>().unwrap_or(0))
-        .next();
+        .next()
+        .map(|s| s.split('/').nth(0).unwrap().parse::<usize>().unwrap_or(0));
     let duration = {
         let stream_info = reader.streaminfo();
         Duration::from_secs(
@@ -111,7 +115,7 @@ fn scan_flac(path: &PathBuf) -> Track {
     Track {
         path: path.to_owned(),
         audio_type: AudioType::Flac,
-        metadata: Metadata { title, artists, album, num, duration: Some(duration) }
+        metadata: Metadata { title, artists, album, discnum, num, duration: Some(duration) }
     }
 }
 
@@ -143,6 +147,7 @@ fn scan_vorbis(path: &PathBuf) -> Track {
     let mut title = None;
     let mut artists = vec![];
     let mut album = None;
+    let mut discnum = None;
     let mut num = None;
 
     for (key, value) in stream.comment_hdr.comment_list {
@@ -156,6 +161,9 @@ fn scan_vorbis(path: &PathBuf) -> Track {
             "ALBUM" => {
                 album = Some(value);
             }
+            "DISCNUMBER" => {
+                discnum = Some(value.split('/').nth(0).unwrap().parse::<usize>().unwrap_or(0))
+            }
             "TRACKNUMBER" => {
                 num = Some(value.split('/').nth(0).unwrap().parse::<usize>().unwrap_or(0))
             }
@@ -163,7 +171,7 @@ fn scan_vorbis(path: &PathBuf) -> Track {
         }
     }
 
-    let metadata = Metadata { title, artists, album, num, duration };
+    let metadata = Metadata { title, artists, album, discnum, num, duration };
 
     Track { path: path.to_owned(), audio_type: AudioType::Vorbis, metadata }
 }
@@ -246,19 +254,21 @@ fn read_id3(path: &PathBuf) -> Option<Metadata> {
                 .map(|v| v.into_iter().map(|s| s.to_owned()).collect())
                 .unwrap_or(vec![]);
             let album = tag.album().map(|s| s.to_owned());
+            let discnum = tag.disc().map(|n| n.try_into().unwrap_or(0));
             let num = tag.track().map(|n| n.try_into().unwrap_or(0));
             let duration = tag.track().map(|s| Duration::from_secs(s as u64));
 
             if title.is_none()
                 && artists.is_empty()
                 && album.is_none()
+                && discnum.is_none()
                 && num.is_none()
                 && duration.is_none()
             {
                 return None;
             }
 
-            Some(Metadata { title, artists, album, num, duration })
+            Some(Metadata { title, artists, album, discnum, num, duration })
         }
         Err(_) => None,
     }
@@ -278,11 +288,14 @@ fn read_ape(path: &PathBuf) -> Option<Metadata> {
                 .map(|i|
                     <ape::Item as TryInto<String>>::try_into(i.to_owned())
                         .unwrap()
+                        .split('/')
+                        .nth(0)
+                        .unwrap()
                         .parse::<usize>()
                         .unwrap_or(0)
                 );
 
-            Some(Metadata { title, artists, album, num, duration: None })
+            Some(Metadata { title, artists, album, discnum: None, num, duration: None })
         }
         Err(_) => None,
     }
@@ -345,7 +358,12 @@ fn scan_dir(lib: &mut Library, path: PathBuf) -> Option<u64> {
     }
 
     tracks_temp.sort_unstable_by_key(|track|
-        (track.metadata.num, track.metadata.title.clone(), track.path.clone()));
+        (
+            track.metadata.discnum,
+            track.metadata.num,
+            track.metadata.title.clone(),
+            track.path.clone()
+        ));
     dir.tracks = tracks_temp.into_iter()
         .map(|track| lib.add_track(track))
         .collect();

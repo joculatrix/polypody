@@ -47,23 +47,19 @@ impl App {
             .into()
     }
 
-    fn library_track_view(track: &Track, num: bool) -> iced::Element<Message> {
+    fn library_track_view(track: &Track, num: usize) -> iced::Element<Message> {
         list_item!(
             row![
-                if num {
-                    text!("{}", unsafe { track.metadata.num.unwrap_unchecked() })
-                        .style(|theme: &iced::Theme| {
-                            let palette = theme.extended_palette();
+                text!("{}", num)
+                    .style(|theme: &iced::Theme| {
+                        let palette = theme.extended_palette();
 
-                            text::Style {
-                                color: Some(palette
-                                    .background.base.text
-                                    .scale_alpha(0.75)),
-                            }
-                        })
-                } else {
-                    text!("")
-                }
+                        text::Style {
+                            color: Some(palette
+                                .background.base.text
+                                .scale_alpha(0.75)),
+                        }
+                    })
                     .size(14)
                     .align_x(iced::Alignment::Center)
                     .width(iced::Length::FillPortion(1)),
@@ -214,11 +210,10 @@ impl App {
             })
             .collect::<Vec<_>>();    
 
-        let num = tracks.iter().all(|t| t.metadata.num.is_some());
-
         let track_items = tracks
             .into_iter()
-            .map(|track| Self::library_track_view(track, num));
+            .enumerate()
+            .map(|(i, track)| Self::library_track_view(track, i + 1));
 
         let tracks_header = container(
             row![
