@@ -1,0 +1,289 @@
+use super::*;
+pub use view::ICON_FONT_BYTES;
+
+mod view;
+
+#[derive(Debug, Clone, Copy)]
+pub enum Message {
+    Dummy,
+    PlayFolder,
+    PlayheadMoved(f32),
+    PlayheadReleased,
+    Shuffle,
+    ShuffleFolder,
+    SkipBack,
+    SkipForward,
+    Stop,
+    ToggleMute,
+    TogglePlay,
+    ToggleRepeat,
+    UpdateProgress,
+    ViewLibrary(u64),
+    VolumeChanged(f32),
+}
+
+#[derive(Default)]
+pub enum PlayStatus {
+    #[default]
+    Pause,
+    Play,
+    Stopped,
+}
+
+#[derive(Copy, Clone, Default, PartialEq)]
+pub enum RepeatStatus {
+    #[default]
+    None,
+    One,
+    All,
+}
+
+pub struct App {
+    codec_registry: &'static CodecRegistry,
+    probe: &'static Probe,
+
+    sink: rodio::Sink,
+    library: Library,
+
+    playing: Option<Track>,
+    queue: Vec<u64>,
+
+    play_status: PlayStatus,
+    repeat: RepeatStatus,
+    playhead_position: f32,
+    seeking: bool,
+    /// If a track is playing, this stores the current timestamp as well as the
+    /// total duration of the track.
+    track_duration: Option<(Duration, Duration)>,
+
+    mute: bool,
+    volume: f32,
+}
+
+impl App {
+    pub fn new(stream_handle: rodio::OutputStreamHandle) -> Self {
+        let library = internal::scan(
+            "/mnt/741ae10f-7ba3-487d-bc13-3953cbb02819/music".into(),
+        );
+
+        let sink = rodio::Sink::try_new(&stream_handle).unwrap();
+        sink.set_volume(0.5);
+
+        Self {
+            codec_registry: symphonia::default::get_codecs(),
+            probe: symphonia::default::get_probe(),
+            sink,
+            library,
+            playing: None,
+            queue: vec![],
+            playhead_position: 0.0,
+            seeking: false,
+            play_status: PlayStatus::Stopped,
+            repeat: RepeatStatus::None,
+            track_duration: None,
+            mute: false,
+            volume: 0.5,
+        }
+    }
+
+    fn play_next(&mut self) {
+        let track = self.queue.remove(0);
+        let track = self.library.get_track(track).unwrap();
+        self.playing = Some(track.clone());
+        self.playhead_position = 0.0;
+        self.track_duration = track.metadata
+            .duration
+            .as_ref()
+            .map(|total| (Duration::from_secs(0), *total));
+        self.sink.stop();
+        self.sink.append(
+            internal::audio::AudioStream::new(
+                &track.path,
+                self.codec_registry,
+                self.probe,
+                track.metadata.duration.unwrap(),
+            )
+        );
+        self.sink.play();
+        self.play_status = PlayStatus::Play;
+    }
+
+    fn stop(&mut self) {
+        self.sink.stop();
+        self.playing = None;
+        self.track_duration = None;
+        self.play_status = PlayStatus::Stopped;
+    }
+
+    pub fn update(&mut self, message: Message) {
+        match message {
+            Message::PlayFolder => {
+                let tracks = &self.library.current_directory().tracks;
+                self.queue.resize(tracks.len(), 0);
+                self.queue
+                    .copy_from_slice(
+                        &self.library.current_directory().tracks
+                    );
+                self.stop();
+                self.play_next();
+            }
+            Message::PlayheadMoved(val) => {
+                self.playhead_position = val;
+                self.seeking = true;
+
+                let Some(_playing) = &self.playing else {
+                    return;
+                };
+
+                let Some((_, duration)) = &self.track_duration else {
+                    return;
+                };
+
+                let seek_pos = Duration::from_secs(
+                    (val * duration.as_secs_f32()) as u64);
+                self.sink.try_seek(seek_pos);
+            }
+            Message::PlayheadReleased => {
+                self.seeking = false;
+            }
+            Message::Shuffle => {
+                use rand::{ rng, seq::SliceRandom };
+
+                self.queue.shuffle(&mut rng());
+            }
+            Message::ShuffleFolder => {
+                use rand::{ rng, seq::SliceRandom };
+
+                let tracks = &self.library.current_directory().tracks;
+                self.queue.resize(tracks.len(), 0);
+                let mut shuffle = (0..tracks.len())
+                    .collect::<Vec<usize>>();
+                shuffle.shuffle(&mut rng());
+                for (i, j) in shuffle.into_iter().enumerate() {
+                    self.queue[i] = tracks[j];
+                }
+                self.stop();
+                self.play_next();
+            }
+            Message::SkipBack => {
+                let Some(playing) = &self.playing else {
+                    return;
+                };
+                match self.repeat {
+                    RepeatStatus::None | RepeatStatus::One => {
+                        self.sink.try_seek(Duration::from_secs(0));
+                    }
+                    RepeatStatus::All => {
+                        let Some((current, _)) = &self.track_duration else {
+                            return;
+                        };
+                        if current.as_secs() <= 1 && !self.queue.is_empty() {
+                            self.queue.insert(0, track_hash(playing));
+                            let last = unsafe {
+                                self.queue.last().unwrap_unchecked()
+                            };
+                            self.queue.insert(0, *last);
+                            self.play_next();
+                        } else {
+                            self.sink.try_seek(Duration::from_secs(0));
+                        }
+                    }
+                }
+            }
+            Message::SkipForward => {
+                let Some(playing) = &self.playing else {
+                    return;
+                };
+                match self.repeat {
+                    RepeatStatus::All => {
+                        self.queue.push(track_hash(playing));
+                    }
+                    _ => (),
+                }
+                if !self.queue.is_empty() {
+                    self.play_next();
+                } else {
+                    self.stop();
+                }
+            }
+            Message::Stop => {
+                self.play_status = PlayStatus::Stopped;
+                self.queue.clear();
+                self.stop();
+            }
+            Message::ToggleMute => {
+                self.mute = !self.mute;
+                if self.mute {
+                    self.sink.set_volume(0.0);
+                } else {
+                    self.sink.set_volume(self.volume);
+                }
+            }
+            Message::TogglePlay => {
+                self.play_status = match self.play_status {
+                    PlayStatus::Play => {
+                        self.sink.pause();
+                        PlayStatus::Pause
+                    }
+                    PlayStatus::Pause | PlayStatus::Stopped => {
+                        self.sink.play();
+                        PlayStatus::Play
+                    }
+                };
+            },
+            Message::ToggleRepeat => {
+                self.repeat = match self.repeat {
+                    RepeatStatus::None => RepeatStatus::One,
+                    RepeatStatus::One => RepeatStatus::All,
+                    RepeatStatus::All => RepeatStatus::None,
+                };
+            },
+            Message::UpdateProgress => {
+                self.update_progress();
+            }
+            Message::ViewLibrary(id) => {
+                self.library.set_current(id); 
+            }
+            Message::VolumeChanged(val) => {
+                self.volume = val;
+                self.sink.set_volume(val);
+            }
+            _ => (),
+        }
+    }
+
+    fn update_progress(&mut self) {
+        if self.sink.empty() {
+            if let Some(playing) = &self.playing {
+                let last = track_hash(playing);
+                match self.repeat {
+                    RepeatStatus::One => self.queue.insert(0, last),
+                    RepeatStatus::All => self.queue.push(last),
+                    RepeatStatus::None => (),
+                }
+            }
+            self.playing = None;
+            if self.queue.len() != 0 {
+                self.play_next();
+            } else {
+                self.playhead_position = 0.0;
+            }
+        } else {
+            let Some(playing) = &self.playing else {
+                return; // prevent race conditions
+            };
+            let sink_pos = self.sink.get_pos();
+            let duration = playing.metadata.duration.unwrap();
+            self.track_duration = Some((sink_pos, duration));
+            if !self.seeking {
+                self.playhead_position =
+                    sink_pos.as_secs_f32() / duration.as_secs_f32();
+            }
+        }
+    }
+
+    pub fn progress_subscription(&self) -> iced::Subscription<Message> {
+        iced::time::every(Duration::from_millis(10))
+            .map(|_| Message::UpdateProgress)
+    }
+}

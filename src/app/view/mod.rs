@@ -1,18 +1,18 @@
-use std::time::Duration;
+use super::*;
+use crate::internal::{ Directory, Track };
 
 use iced::Font;
 use iced::widget::{
-    button, column, container, row, text, Button, Column, Row,
+    button, column, container, row, text, Button,
     scrollable, slider, Space, image,
 };
 
-use crate::{ App, Message, PlayStatus, RepeatStatus };
-use crate::internal::{ Directory, Metadata, Track };
+use std::time::Duration;
 
 mod library;
 mod style;
 
-pub const ICON_FONT_BYTES: &[u8] = include_bytes!("../../fonts/lucide.ttf");
+pub const ICON_FONT_BYTES: &[u8] = include_bytes!("../../../fonts/lucide.ttf");
 const ICON_FONT: Font = Font::with_name("lucide");
 
 const CONTROL_BUTTON_SIZE: u16 = 36;

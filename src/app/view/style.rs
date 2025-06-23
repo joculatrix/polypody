@@ -1,4 +1,4 @@
-use iced::{widget::{button, container, slider}, Border };
+use iced::{widget::{button, slider}, Border };
 
 use super::CONTROL_BUTTON_SIZE;
 
