@@ -1,6 +1,23 @@
-use iced::{widget::{button, slider}, Border };
+use iced::{ widget::{ button, container, slider, text }, Border };
 
 use super::CONTROL_BUTTON_SIZE;
+
+pub(super) fn control_panel_box(
+    theme: &iced::Theme
+) -> container::Style {
+    let palette = theme.extended_palette();
+
+    container::Style {
+        background: None,
+        border: iced::border::rounded(5)
+            .color(iced::Color {
+                a: 0.10,
+                ..palette.background.base.text
+            })
+            .width(2),
+        ..container::Style::default()
+    }
+}
 
 pub(super) fn list_item(
     theme: &iced::Theme,
@@ -101,6 +118,22 @@ pub(super) fn toggle_icon_button(
     }
 }
 
+pub(super) fn toggle_text(
+    toggle_condition: bool,
+) -> impl Fn(&iced::Theme) -> text::Style {
+    move |theme: &iced::Theme| {
+        let palette = theme.extended_palette();
+
+        text::Style {
+            color: Some(if toggle_condition {
+                palette.primary.base.color
+            } else {
+                palette.background.base.text
+            })
+        }
+    }
+}
+
 pub(super) fn clean_slider(
     theme: &iced::Theme,
     status: slider::Status
@@ -112,10 +145,14 @@ pub(super) fn clean_slider(
             shape: slider::HandleShape::Circle {
                 radius: match status {
                     slider::Status::Dragged | slider::Status::Hovered => 8.0,
-                    _ => 0.0,
+                    _ => 4.0,
                 }
             },
-            background: palette.background.base.color.into(),
+            background: match status {
+                slider::Status::Dragged | slider::Status::Hovered =>
+                    palette.background.base.color.into(),
+                _ => palette.background.base.text.into(),
+            },
             border_width: 2.0,
             border_color: if status == slider::Status::Dragged {
                 palette.primary.base.color
@@ -139,5 +176,33 @@ pub(super) fn clean_slider(
                 radius: 2.0.into(),
             }
         }
+    }
+}
+
+pub(super) fn track_list_container(
+    theme: &iced::Theme,
+) -> container::Style {
+    let palette = theme.extended_palette();
+
+    container::Style {
+        background: iced::Color::parse("#242226").map(|c| c.into()),
+        border: iced::Border {
+            color: palette.background.base.text.scale_alpha(0.2),
+            width: 1.0,
+            radius: (2.0).into(),
+        },
+        ..container::Style::default()
+    }
+}
+
+pub(super) fn tracks_header(
+    theme: &iced::Theme,
+) -> container::Style {
+    let palette = theme.extended_palette();
+
+    container::Style {
+        text_color: Some(palette.background.base.text.scale_alpha(0.6)),
+        background: Some(palette.background.base.color.into()),
+        ..container::Style::default()
     }
 }

@@ -22,7 +22,7 @@ pub enum Message {
     VolumeChanged(f32),
 }
 
-#[derive(Default)]
+#[derive(Copy, Clone, Default)]
 pub enum PlayStatus {
     #[default]
     Pause,

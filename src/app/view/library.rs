@@ -1,7 +1,7 @@
 use super::{ column, * };
 
 impl App {
-    fn library_subdir_view(dir: &Directory) -> iced::Element<Message> {
+    fn library_subdir_view(dir: &Directory) -> Element {
         list_item!(
             row![
                 container(
@@ -35,7 +35,7 @@ impl App {
                     .align_x(iced::Alignment::Start)
                     .center_y(CONTROL_BUTTON_SIZE),
                 text!("{}", &dir.path.file_name().unwrap().to_str().unwrap())
-                    .size(14)
+                    .size(TEXT_SIZE)
                     .align_x(iced::Alignment::Start)
                     .align_y(iced::Alignment::Center)
                     .width(iced::Length::FillPortion(24)),
@@ -47,7 +47,7 @@ impl App {
             .into()
     }
 
-    fn library_track_view(track: &Track, num: usize) -> iced::Element<Message> {
+    fn library_track_view(track: &Track, num: usize) -> Element {
         list_item!(
             row![
                 text!("{}", num)
@@ -60,7 +60,7 @@ impl App {
                                 .scale_alpha(0.75)),
                         }
                     })
-                    .size(14)
+                    .size(TEXT_SIZE)
                     .align_x(iced::Alignment::Center)
                     .width(iced::Length::FillPortion(1)),
                 column![
@@ -71,7 +71,7 @@ impl App {
                             track.path.file_name().unwrap().to_str().unwrap()
                         ),
                     }
-                        .size(14)
+                        .size(TEXT_SIZE)
                         .align_x(iced::Alignment::Start)
                         .align_y(iced::Alignment::Center),
                     if track.metadata.artists.is_empty() {
@@ -79,7 +79,7 @@ impl App {
                     } else {
                         text!("{}", print_artists(&track.metadata.artists))
                     }
-                        .size(14)
+                        .size(TEXT_SIZE)
                         .align_x(iced::Alignment::Start)
                         .align_y(iced::Alignment::Center),
                 ]
@@ -89,7 +89,7 @@ impl App {
                     Some(album) => text!("{}", album),
                     None => text!(""),
                 }
-                    .size(14)
+                    .size(TEXT_SIZE)
                     .align_x(iced::Alignment::Start)
                     .align_y(iced::Alignment::Center)
                     .width(iced::Length::FillPortion(8)),
@@ -97,7 +97,7 @@ impl App {
                     Some(duration) => text!("{}", print_duration(duration)),
                     None => text!(""),
                 }
-                    .size(14)
+                    .size(TEXT_SIZE)
                     .align_x(iced::Alignment::Start)
                     .align_y(iced::Alignment::Center)
                     .width(iced::Length::FillPortion(3)),
@@ -109,7 +109,7 @@ impl App {
             .into()
     }
 
-    fn library_header_view(dir: &Directory) -> iced::Element<Message> {
+    fn library_header_view(dir: &Directory) -> Element {
         container(
             row![
                 container(
@@ -137,9 +137,9 @@ impl App {
                                 row![
                                     text!("{}", char::from(Icon::ArrowCornerLU))
                                         .font(ICON_FONT)
-                                        .size(14),
+                                        .size(TEXT_SIZE),
                                     text!(" back")
-                                        .size(14),
+                                        .size(TEXT_SIZE),
                                 ]
                             )
                                 .style(style::plain_icon_button)
@@ -147,7 +147,7 @@ impl App {
                                 .into()
                         )
                         .unwrap_or_else(||
-                            text!("").size(14).into(),
+                            text!("").size(TEXT_SIZE).into(),
                         ),
                     text!("{}", dir.path.file_name().unwrap().to_str().unwrap())
                         .size(20)
@@ -183,7 +183,39 @@ impl App {
             .into()
     }
 
-    pub(super) fn library_view(&self) -> iced::Element<Message> {   
+    fn tracks_header(draw: bool) -> Element<'static> {
+        container(
+            if draw {
+                row![
+                    text!("#")
+                        .size(TEXT_SIZE)
+                        .width(iced::Length::FillPortion(1))
+                        .align_x(iced::Alignment::Center),
+                    text!("Title")
+                        .size(TEXT_SIZE)
+                        .width(iced::Length::FillPortion(8))
+                        .align_x(iced::Alignment::Start),
+                    text!("Album")
+                        .size(TEXT_SIZE)
+                        .width(iced::Length::FillPortion(8))
+                        .align_x(iced::Alignment::Start),
+                    text!("Duration")
+                        .size(TEXT_SIZE)
+                        .width(iced::Length::FillPortion(3))
+                        .align_x(iced::Alignment::Start),
+                ]
+                    .into()
+            } else {
+                <Space as Into<iced::Element<Message>>>
+                    ::into(Space::new(iced::Length::Fill, iced::Length::Shrink))
+            }
+        )
+            .width(iced::Length::Fill)
+            .style(style::tracks_header)
+            .into()
+    }
+
+    pub(super) fn library_view(&self) -> Element {   
         let dir = self.library.current_directory();
 
         let mut subdirs = dir
@@ -215,46 +247,14 @@ impl App {
             .enumerate()
             .map(|(i, track)| Self::library_track_view(track, i + 1));
 
-        let tracks_header = container(
-            row![
-                text!("#")
-                    .size(14)
-                    .width(iced::Length::FillPortion(1))
-                    .align_x(iced::Alignment::Center),
-                text!("Title")
-                    .size(14)
-                    .width(iced::Length::FillPortion(8))
-                    .align_x(iced::Alignment::Start),
-                text!("Album")
-                    .size(14)
-                    .width(iced::Length::FillPortion(8))
-                    .align_x(iced::Alignment::Start),
-                text!("Duration")
-                    .size(14)
-                    .width(iced::Length::FillPortion(3))
-                    .align_x(iced::Alignment::Start),
-            ]
-        )
-            .width(iced::Length::Fill)
-            .style(|theme: &iced::Theme| {
-                let palette = theme.extended_palette();
-
-                container::Style {
-                    text_color: Some(palette.background.base.text.scale_alpha(0.6)),
-                    background: Some(palette.background.base.color.into()),
-                    ..container::Style::default()
-                }
-            })
-            .into();
-
-
         container(
             column![
                 Self::library_header_view(dir),
                 scrollable(
                     column(
                         dir_items
-                            .chain(std::iter::once(tracks_header))
+                            .chain(std::iter::once(
+                                Self::tracks_header(!track_items.is_empty())))
                             .chain(track_items)
                     )
                 )
@@ -265,19 +265,7 @@ impl App {
                     .height(iced::Length::Fill)
             ]
         )
-            .style(|theme: &iced::Theme| {
-                let palette = theme.extended_palette();
-
-                container::Style {
-                    background: iced::Color::parse("#242226").map(|c| c.into()),
-                    border: iced::Border {
-                        color: palette.background.base.text.scale_alpha(0.2),
-                        width: 1.0,
-                        radius: (2.0).into(),
-                    },
-                    ..container::Style::default()
-                }
-            })
+            .style(style::track_list_container)
             .padding(2)
             .height(iced::Length::Fill)
             .into()
