@@ -247,6 +247,7 @@ fn scan_dir(lib: &mut Library, path: PathBuf) -> Option<u64> {
 
     let mut dir = Directory::new(path.to_owned());
     let mut tracks_temp = vec![];
+    let mut imgs_temp = vec![];
 
     for entry in path.read_dir().unwrap().into_iter() {
         if let Err(e) = entry {
@@ -275,15 +276,7 @@ fn scan_dir(lib: &mut Library, path: PathBuf) -> Option<u64> {
                     } else {
                         match scan_file(&entry.path()) {
                             Some(ScanResult::Image(data)) => {
-                                if dir.img.is_none()
-                                    && entry.path()
-                                        .file_name().unwrap()
-                                        .to_str().unwrap()
-                                        .to_lowercase()
-                                        .contains("cover")
-                                {
-                                    dir.img = Some(data);
-                                }
+                                imgs_temp.push(data);
                             }
                             Some(ScanResult::Track(track)) => {
                                 tracks_temp.push(track);
@@ -308,11 +301,63 @@ fn scan_dir(lib: &mut Library, path: PathBuf) -> Option<u64> {
         .map(|track| lib.add_track(track))
         .collect();
 
+    dir.img = sort_images(imgs_temp, &dir.path);
+
     if dir.subdirs.is_empty() && dir.tracks.is_empty() {
         None
     } else {
         Some(lib.add_directory(dir))
     } 
+}
+
+fn sort_images(imgs: Vec<PathBuf>, dir_path: &PathBuf) -> Option<PathBuf> {
+    if !imgs.is_empty() && imgs.len() != 1 {
+        let mut first_alphabetical: Option<&PathBuf> = None;
+        let mut matches_dir_name = None;
+        let mut matches_cover = None;
+        let mut matches_folder = None;
+        let mut matches_front = None;
+        for img in &imgs {
+            if let Some(first) = &mut first_alphabetical {
+                if img.to_str().unwrap() < first.to_str().unwrap() {
+                    *first = img;
+                }
+            } else {
+                first_alphabetical = Some(img);
+            }
+
+            let name = img.file_stem().unwrap().to_str().unwrap().to_lowercase();
+
+            if name == dir_path.file_stem().unwrap()
+                .to_str().unwrap().to_lowercase()
+            {
+                matches_dir_name = Some(img);
+                break;
+            }
+            if name.contains("cover") {
+                matches_cover = Some(img);
+            }
+            if name.contains("folder") {
+                matches_folder = Some(img);
+            }
+            if name.contains("front") {
+                matches_front = Some(img);
+            }
+        }
+        Some(if let Some(img) = matches_dir_name {
+            img.to_owned()
+        } else if let Some(img) = matches_cover {
+            img.to_owned()
+        } else if let Some(img) = matches_folder {
+            img.to_owned()
+        } else if let Some(img) = matches_front {
+            img.to_owned()
+        } else {
+            unsafe { first_alphabetical.unwrap_unchecked().to_owned() }
+        })
+    } else {
+        imgs.get(0).cloned()
+    }
 }
 
 #[cfg(test)]
