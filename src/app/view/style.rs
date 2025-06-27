@@ -19,7 +19,7 @@ pub(super) fn control_panel_box(
     }
 }
 
-pub(super) fn list_item(
+pub(super) fn dir_list_item(
     theme: &iced::Theme,
     status: button::Status,
 ) -> button::Style {
@@ -64,6 +64,35 @@ pub(super) fn plain_icon_button(
             _ => palette.background.base.text.into(),
         },
         ..button::Style::default()
+    }
+}
+
+pub(super) fn plain_icon_button_with_colors(
+    background: Option<iced::Background>,
+    text: Option<iced::Color>,
+) -> impl Fn(&iced::Theme, button::Status) -> button::Style {
+    move |theme: &iced::Theme, status: button::Status| {
+        let palette = theme.extended_palette();
+        let text = text.unwrap_or(palette.background.base.text);
+        button::Style {
+            text_color: match status {
+                button::Status::Hovered => {
+                    iced::Color {
+                        a: 0.75,
+                        ..text
+                    }
+                },
+                button::Status::Pressed => {
+                    iced::Color {
+                        a: 0.60,
+                        ..text
+                    }
+                }
+                _ => text
+            },
+            background,
+            ..button::Style::default()
+        }
     }
 }
 

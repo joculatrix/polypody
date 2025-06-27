@@ -5,8 +5,10 @@ mod view;
 
 #[derive(Debug, Clone, Copy)]
 pub enum Message {
+    AppendTrack(usize),
     Dummy,
     PlayFolder,
+    PlayTrack(usize),
     PlayheadMoved(f32),
     PlayheadReleased,
     Shuffle,
@@ -117,6 +119,9 @@ impl App {
 
     pub fn update(&mut self, message: Message) {
         match message {
+            Message::AppendTrack(index) => {
+                self.queue.push(self.library.current_directory().tracks[index]);
+            }
             Message::PlayFolder => {
                 let tracks = &self.library.current_directory().tracks;
                 self.queue.resize(tracks.len(), 0);
@@ -125,6 +130,11 @@ impl App {
                         &self.library.current_directory().tracks
                     );
                 self.stop();
+                self.play_next();
+            }
+            Message::PlayTrack(index) => {
+                self.queue.clear();
+                self.queue.push(self.library.current_directory().tracks[index]);
                 self.play_next();
             }
             Message::PlayheadMoved(val) => {

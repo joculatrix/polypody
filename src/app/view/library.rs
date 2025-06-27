@@ -1,8 +1,10 @@
+use iced::widget::vertical_space;
+
 use super::{ column, * };
 
 impl App {
     fn library_subdir_view(dir: &Directory) -> Element {
-        list_item!(
+        button(
             row![
                 container(
                     text!("{}", char::from(Icon::ArrowCornerDR))
@@ -43,70 +45,100 @@ impl App {
                 .height(iced::Length::Fill)
                 .align_y(iced::Alignment::Center)
         )
+            .width(iced::Length::Fill)
+            .height(48)
+            .style(style::dir_list_item)
             .on_press(Message::ViewLibrary(crate::internal::library::directory_hash(dir)))
             .into()
     }
 
     fn library_track_view(track: &Track, num: usize) -> Element {
-        list_item!(
-            row![
-                text!("{}", num)
-                    .style(|theme: &iced::Theme| {
-                        let palette = theme.extended_palette();
+        let internal_track_index = unsafe {
+            num.unchecked_sub(1)
+        };
+        iced::widget::hover(
+            container(
+                row![
+                    text!("{}    ", num)
+                        .style(|theme: &iced::Theme| {
+                            let palette = theme.extended_palette();
 
-                        text::Style {
-                            color: Some(palette
-                                .background.base.text
-                                .scale_alpha(0.75)),
+                            text::Style {
+                                color: Some(palette
+                                    .background.base.text
+                                    .scale_alpha(0.75)),
+                            }
+                        })
+                        .size(TEXT_SIZE)
+                        .align_x(iced::Alignment::End)
+                        .width(iced::Length::FillPortion(2)),
+                    column![
+                        match &track.metadata.title {
+                            Some(title) => text!("{}", title),
+                            None => text!(
+                                "{}",
+                                track.path.file_name().unwrap()
+                                    .to_str().unwrap()
+                            ),
                         }
-                    })
-                    .size(TEXT_SIZE)
-                    .align_x(iced::Alignment::Center)
-                    .width(iced::Length::FillPortion(1)),
-                column![
-                    match &track.metadata.title {
-                        Some(title) => text!("{}", title),
-                        None => text!(
-                            "{}",
-                            track.path.file_name().unwrap().to_str().unwrap()
-                        ),
+                            .size(TEXT_SIZE)
+                            .align_x(iced::Alignment::Start)
+                            .align_y(iced::Alignment::Center),
+                        if track.metadata.artists.is_empty() {
+                            text!("")
+                        } else {
+                            text!("{}", print_artists(&track.metadata.artists))
+                        }
+                            .size(TEXT_SIZE)
+                            .align_x(iced::Alignment::Start)
+                            .align_y(iced::Alignment::Center),
+                    ]
+                        .align_x(iced::Alignment::Start)
+                        .width(iced::Length::FillPortion(10)),
+                    match &track.metadata.album {
+                        Some(album) => text!("{}", album),
+                        None => text!(""),
                     }
                         .size(TEXT_SIZE)
                         .align_x(iced::Alignment::Start)
-                        .align_y(iced::Alignment::Center),
-                    if track.metadata.artists.is_empty() {
-                        text!("")
-                    } else {
-                        text!("{}", print_artists(&track.metadata.artists))
+                        .align_y(iced::Alignment::Center)
+                        .width(iced::Length::FillPortion(10)),
+                    match &track.metadata.duration {
+                        Some(duration) => text!("{}", print_duration(duration)),
+                        None => text!(""),
                     }
                         .size(TEXT_SIZE)
                         .align_x(iced::Alignment::Start)
-                        .align_y(iced::Alignment::Center),
+                        .align_y(iced::Alignment::Center)
+                        .width(iced::Length::FillPortion(4)),
                 ]
-                    .align_x(iced::Alignment::Start)
-                    .width(iced::Length::FillPortion(8)),
-                match &track.metadata.album {
-                    Some(album) => text!("{}", album),
-                    None => text!(""),
-                }
-                    .size(TEXT_SIZE)
-                    .align_x(iced::Alignment::Start)
+                    .height(iced::Length::Fill)
                     .align_y(iced::Alignment::Center)
-                    .width(iced::Length::FillPortion(8)),
-                match &track.metadata.duration {
-                    Some(duration) => text!("{}", print_duration(duration)),
-                    None => text!(""),
-                }
-                    .size(TEXT_SIZE)
-                    .align_x(iced::Alignment::Start)
-                    .align_y(iced::Alignment::Center)
-                    .width(iced::Length::FillPortion(3)),
+            )
+                .height(48),
+            row![
+                control_button!(
+                    icon: Icon::Play,
+                    msg: Message::PlayTrack(internal_track_index),
+                    style: style::plain_icon_button_with_colors(
+                        iced::Color::parse("#242226").map(|c| c.into()),
+                        None
+                    ),
+                )
+                    .width(iced::Length::FillPortion(1)),
+                control_button!(
+                    icon: Icon::Plus,
+                    msg: Message::AppendTrack(internal_track_index),
+                    style: style::plain_icon_button_with_colors(
+                        iced::Color::parse("#242226").map(|c| c.into()),
+                        None
+                    ),
+                )
+                    .width(iced::Length::FillPortion(1)),
+                vertical_space().width(iced::Length::FillPortion(24)),
             ]
-                .height(iced::Length::Fill)
                 .align_y(iced::Alignment::Center)
         )
-            .on_press(Message::Dummy)
-            .into()
     }
 
     fn library_header_view(dir: &Directory) -> Element {
@@ -187,21 +219,21 @@ impl App {
         container(
             if draw {
                 row![
-                    text!("#")
+                    text!("#    ")
                         .size(TEXT_SIZE)
-                        .width(iced::Length::FillPortion(1))
-                        .align_x(iced::Alignment::Center),
+                        .width(iced::Length::FillPortion(2))
+                        .align_x(iced::Alignment::End),
                     text!("Title")
                         .size(TEXT_SIZE)
-                        .width(iced::Length::FillPortion(8))
+                        .width(iced::Length::FillPortion(10))
                         .align_x(iced::Alignment::Start),
                     text!("Album")
                         .size(TEXT_SIZE)
-                        .width(iced::Length::FillPortion(8))
+                        .width(iced::Length::FillPortion(10))
                         .align_x(iced::Alignment::Start),
                     text!("Duration")
                         .size(TEXT_SIZE)
-                        .width(iced::Length::FillPortion(3))
+                        .width(iced::Length::FillPortion(4))
                         .align_x(iced::Alignment::Start),
                 ]
                     .into()
