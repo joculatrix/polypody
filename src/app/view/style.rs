@@ -2,6 +2,46 @@ use iced::{ widget::{ button, container, slider, text }, Border };
 
 use super::CONTROL_BUTTON_SIZE;
 
+pub(super) fn context_menu(theme: &iced::Theme) -> container::Style {
+    let palette = theme.extended_palette();
+
+    container::Style {
+        background: Some(palette.background.base.color.into()),
+        border: iced::border::rounded(1)
+            .color(palette.background.base.text)
+            .width(1),
+        shadow: iced::Shadow {
+            offset: iced::Vector { x: 2.0, y: 2.0 },
+            color: iced::Color::parse("#222024").unwrap(),
+            ..iced::Shadow::default()
+        },
+        ..container::Style::default()
+    }
+}
+
+pub(super) fn context_menu_button(
+    theme: &iced::Theme,
+    status: button::Status,
+) -> button::Style {
+    let palette = theme.extended_palette();
+
+    button::Style {
+        background: match status {
+            button::Status::Hovered =>
+                iced::Color::parse("#242226").map(|c| c.into()),
+            button::Status::Pressed =>
+                iced::Color::parse("#222024").map(|c| c.into()),
+            _ => Some(palette.background.base.color.into()),
+        },
+        text_color: match status {
+            button::Status::Pressed =>
+                palette.background.base.text.scale_alpha(0.75),
+            _ => palette.background.base.text,
+        },
+        ..button::Style::default()
+    }
+}
+
 pub(super) fn control_panel_box(
     theme: &iced::Theme
 ) -> container::Style {
