@@ -22,6 +22,10 @@ async fn main() -> iced::Result {
         .font(app::ICON_FONT_BYTES)
         .theme(theme)
         .subscription(App::progress_subscription)
+        .window(iced::window::Settings {
+            min_size: Some([1200.0, 760.0].into()),
+            ..Default::default()
+        })
         .run_with(|| {
             (App::new(stream_handle), iced::Task::none())
         })

@@ -7,6 +7,8 @@ mod view;
 pub enum Message {
     AppendTrack(usize),
     Dummy,
+    QueueRemove(usize),
+    QueueSwap(usize, usize),
     PlayFolder,
     PlayTrack(usize),
     PlayheadMoved(f32),
@@ -19,6 +21,7 @@ pub enum Message {
     ToggleMute,
     TogglePlay,
     ToggleRepeat,
+    ToggleShowQueue,
     UpdateProgress,
     ViewLibrary(u64),
     VolumeChanged(f32),
@@ -49,6 +52,7 @@ pub struct App {
 
     playing: Option<Track>,
     queue: Vec<u64>,
+    show_queue: bool,
 
     play_status: PlayStatus,
     repeat: RepeatStatus,
@@ -78,6 +82,7 @@ impl App {
             library,
             playing: None,
             queue: vec![],
+            show_queue: false,
             playhead_position: 0.0,
             seeking: false,
             play_status: PlayStatus::Stopped,
@@ -121,6 +126,16 @@ impl App {
         match message {
             Message::AppendTrack(index) => {
                 self.queue.push(self.library.current_directory().tracks[index]);
+            }
+            Message::QueueRemove(index) => {
+                self.queue.remove(index);
+            }
+            Message::QueueSwap(a, b) => {
+                if b >= self.queue.len() {
+                    return;
+                } else {
+                    self.queue.swap(a, b);
+                }
             }
             Message::PlayFolder => {
                 let tracks = &self.library.current_directory().tracks;
@@ -248,6 +263,9 @@ impl App {
                     RepeatStatus::All => RepeatStatus::None,
                 };
             },
+            Message::ToggleShowQueue => {
+                self.show_queue = !self.show_queue;
+            }
             Message::UpdateProgress => {
                 self.update_progress();
             }

@@ -91,18 +91,19 @@ pub(super) fn plain_icon_button(
         text_color: match status {
             button::Status::Hovered => {
                 iced::Color {
-                    a: 0.75,
+                    a: 0.60,
                     ..palette.background.base.text.into()
                 }
             },
             button::Status::Pressed => {
                 iced::Color {
-                    a: 0.60,
+                    a: 0.40,
                     ..palette.background.base.text.into()
                 }
             }
             _ => palette.background.base.text.into(),
         },
+        background: Some(palette.background.base.color.into()),
         ..button::Style::default()
     }
 }
@@ -118,13 +119,13 @@ pub(super) fn plain_icon_button_with_colors(
             text_color: match status {
                 button::Status::Hovered => {
                     iced::Color {
-                        a: 0.75,
+                        a: 0.60,
                         ..text
                     }
                 },
                 button::Status::Pressed => {
                     iced::Color {
-                        a: 0.60,
+                        a: 0.40,
                         ..text
                     }
                 }

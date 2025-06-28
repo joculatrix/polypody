@@ -25,15 +25,19 @@ type Element<'a> = iced::Element<'a, Message>;
 enum Icon {
     ArrowCornerDR,
     ArrowCornerLU,
+    ChevronDown,
+    ChevronUp,
     Folder,
     Pause,
     Play,
     Plus,
+    Queue,
     Repeat,
     Shuffle,
     SkipBack,
     SkipForward,
     Square,
+    Trash,
     VolumeMute,
     VolumeLow,
     VolumeMid,
@@ -45,15 +49,19 @@ impl From<Icon> for char {
         match value {
             Icon::ArrowCornerDR =>  '\u{E0A6}',
             Icon::ArrowCornerLU =>  '\u{E0A8}',
+            Icon::ChevronDown =>    '\u{E071}',
+            Icon::ChevronUp =>      '\u{E074}',
             Icon::Folder =>         '\u{E0DB}',
             Icon::Pause =>          '\u{E132}',
             Icon::Play =>           '\u{E140}',
             Icon::Plus =>           '\u{E141}',
+            Icon::Queue =>          '\u{E2E0}',
             Icon::Repeat =>         '\u{E14A}',
             Icon::Shuffle =>        '\u{E162}',
             Icon::SkipBack =>       '\u{E163}',
             Icon::SkipForward =>    '\u{E164}',
             Icon::Square =>         '\u{E16B}',
+            Icon::Trash =>          '\u{E18E}',
             Icon::VolumeMute =>     '\u{E1AC}',
             Icon::VolumeLow =>      '\u{E1A9}',
             Icon::VolumeMid =>      '\u{E1AA}',
@@ -95,26 +103,29 @@ macro_rules! fill {
 
 pub(self) use fill;
 
-macro_rules! list_item {
-    ($item:expr) => {
-        button($item)
-            .style(style::list_item)
-            .width(iced::Length::Fill)
-            .height(48)
-    }
-}
-
-pub(self) use list_item;
-
 impl App {
     pub fn view (&self) -> Element {
         container(
             column![
-                self.library_view(),
+                container(
+                    control_button!(
+                        icon: Icon::Queue,
+                        msg: Message::ToggleShowQueue,
+                        style: style::toggle_icon_button(self.show_queue),
+                    )
+                )
+                    .align_x(iced::Alignment::End)
+                    .width(iced::Length::Fill),
+                row![
+                    self.library_view(),
+                    iced::widget::vertical_space().width(5),                    
+                    self.queue_view(),
+                ],
                 self.current_track(),
                 self.progress_bar(),
                 self.control_bar(),
             ]
+                .padding(3)
                 .align_x(iced::alignment::Horizontal::Center)
                 .width(iced::Length::Fill)
                 .height(iced::Length::Fill)
@@ -122,6 +133,105 @@ impl App {
             .width(iced::Length::Fill)
             .height(iced::Length::Fill)
             .padding(10)
+            .into()
+    }
+
+    fn queue_item(num: usize, track: &Track) -> Element {
+        iced::widget::hover(
+            container(
+                column![
+                    text!(
+                        "{}",
+                        track.metadata.title
+                            .as_deref()
+                            .unwrap_or(track.path.file_name().unwrap()
+                                .to_str().unwrap())
+                    )
+                        .size(TEXT_SIZE),
+                    text!("{}", print_artists(&track.metadata.artists))
+                        .size(TEXT_SIZE)
+                        .style(|theme: &iced::Theme| {
+                            text::Style {
+                                color: Some(
+                                    theme.extended_palette()
+                                        .background.base.text
+                                        .scale_alpha(0.5)
+                                )
+                            }
+                        }),
+                ]
+            )
+                .padding(3)
+                .width(iced::Length::Fill)
+                .height(48),
+            container(
+                row![
+                    column![
+                        icon_button(Icon::ChevronUp, 16)
+                            .on_press(Message::QueueSwap(num, num.saturating_sub(1)))
+                            .padding(1)
+                            .style(style::plain_icon_button_with_colors(
+                                iced::Color::parse("#242226").map(|c| c.into()),
+                                None
+                            )),
+                        icon_button(Icon::ChevronDown, 16)
+                            .on_press(Message::QueueSwap(num, num.saturating_add(1)))
+                            .padding(1)
+                            .style(style::plain_icon_button_with_colors(
+                                iced::Color::parse("#242226").map(|c| c.into()),
+                                None
+                            )),
+                    ],
+                    control_button!(
+                        icon: Icon::Trash,
+                        msg: Message::QueueRemove(num),
+                        style: style::plain_icon_button_with_colors(
+                            iced::Color::parse("#242226").map(|c| c.into()),
+                            None,
+                        )
+                    )
+                ]
+                    .height(iced::Length::Fill)
+                    .align_y(iced::Alignment::Center)
+            )
+                .align_x(iced::Alignment::End)
+                .padding(iced::Padding { right: 5.0, ..iced::Padding::default() })
+                .width(iced::Length::Fill)
+                .height(iced::Length::Fill)
+        ) 
+    }
+
+    fn queue_view(&self) -> Element {
+        let mut contents = vec![];
+
+        if self.show_queue {
+            let queue = self.queue.iter()
+                .enumerate()
+                .map(|(i, track)| {
+                    let track = self.library.get_track(*track).unwrap();
+                    Self::queue_item(i, track)
+                })
+                .collect::<Vec<_>>();
+            contents.push(
+                container(
+                    scrollable(
+                        column(queue)
+                    )
+                )
+                    .style(style::track_list_container)
+                    .width(iced::Length::Fill)
+                    .height(iced::Length::Fill)
+                    .into()
+            )
+        }
+
+        column(contents)
+            .width(if self.show_queue {
+                    iced::Length::FillPortion(3)
+                } else {
+                    iced::Length::Shrink
+                })
+            .height(iced::Length::Fill)
             .into()
     }
 }
