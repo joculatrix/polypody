@@ -6,7 +6,6 @@ mod view;
 #[derive(Debug, Clone, Copy)]
 pub enum Message {
     AppendTrack(usize),
-    Dummy,
     QueueRemove(usize),
     QueueSwap(usize, usize),
     PlayFolder,

@@ -19,7 +19,6 @@ impl App {
                     match &dir.img {
                         Some(img_path) => {
                             let img = image(img_path)
-                                .content_fit(iced::ContentFit::Cover)
                                 .width(CONTROL_BUTTON_SIZE)
                                 .height(CONTROL_BUTTON_SIZE);
                             <image::Image as Into<iced::Element<Message>>>::into(img)
@@ -35,7 +34,7 @@ impl App {
                 )
                     .width(CONTROL_BUTTON_SIZE + 10)
                     .align_x(iced::Alignment::Start)
-                    .center_y(CONTROL_BUTTON_SIZE),
+                    .align_y(iced::Alignment::Center),
                 text!("{}", &dir.path.file_name().unwrap().to_str().unwrap())
                     .size(TEXT_SIZE)
                     .align_x(iced::Alignment::Start)
