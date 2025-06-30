@@ -12,7 +12,7 @@ pub mod playlist;
 pub mod scan;
 
 
-#[derive(Debug)]
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
 pub struct Directory {
     pub parent: u64,
     pub path: PathBuf,
@@ -33,7 +33,7 @@ impl Directory {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, serde::Deserialize, serde::Serialize)]
 pub enum AudioType {
     Flac,
     Mp3,
@@ -41,14 +41,14 @@ pub enum AudioType {
     Wav,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
 pub struct Track {
     pub path: PathBuf,
     pub audio_type: AudioType,
     pub metadata: Metadata,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
 pub struct Metadata {
     pub title: Option<String>,
     pub artists: Vec<String>,
@@ -60,6 +60,13 @@ pub struct Metadata {
 
 impl Default for Metadata {
     fn default() -> Self {
-        Self { title: None, artists: vec![], album: None, discnum: None, num: None, duration: None }
+        Self {
+            title: None,
+            artists: vec![],
+            album: None,
+            discnum: None,
+            num: None,
+            duration: None,
+        }
     }
 }
