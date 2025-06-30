@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, path::PathBuf};
 use xxhash_rust::xxh3::xxh3_64;
 
 use super::{ Directory, Track };
@@ -75,6 +75,10 @@ impl Library {
 
 pub fn directory_hash(dir: &Directory) -> u64 {
     xxh3_64(dir.path.as_os_str().as_encoded_bytes())
+}
+
+pub fn path_hash(path: &PathBuf) -> u64 {
+    xxh3_64(path.as_os_str().as_encoded_bytes())
 }
 
 pub fn track_hash(track: &Track) -> u64 {

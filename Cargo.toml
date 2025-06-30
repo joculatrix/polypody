@@ -12,6 +12,8 @@ lewton = "0.10.2"
 mp3-duration = "0.1.10"
 rand = "0.9.1"
 ringbuf = "0.4.8"
+serde = { version = "1.0.219", features = ["derive"] }
+toml = "0.8.23"
 
 [dependencies.iced]
 version = "0.13.1"
