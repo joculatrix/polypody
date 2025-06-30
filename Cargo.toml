@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 ape = "0.6.0"
+bincode = { version = "2.0.1", features = ["serde"] }
 claxon = "0.4.3"
 hound = "3.5.1"
 id3 = "1.16.3"

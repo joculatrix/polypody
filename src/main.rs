@@ -6,6 +6,7 @@
 use app::App;
 use internal::Track;
 use internal::library::{track_hash, Library};
+use std::path::PathBuf;
 use std::time::Duration;
 use symphonia::core::codecs::CodecRegistry;
 use symphonia::core::probe::Probe;
@@ -29,6 +30,12 @@ async fn main() -> iced::Result {
         .run_with(|| {
             (App::new(stream_handle), iced::Task::none())
         })
+}
+
+fn exe_path() -> std::io::Result<PathBuf> {
+    let mut dir = std::env::current_exe()?;
+    dir.pop();
+    Ok(dir)
 }
 
 fn theme(_state: &App) -> iced::Theme {

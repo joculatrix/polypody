@@ -1,4 +1,4 @@
-use std::{collections::HashMap, path::PathBuf};
+use std::{collections::HashMap, fs::File, io::Write, path::PathBuf};
 use xxhash_rust::xxh3::xxh3_64;
 
 use super::{ Directory, Track };
@@ -71,6 +71,19 @@ impl Library {
     pub fn set_root(&mut self, id: u64) {
         self.root_dir = id;
         self.curr_dir = id;
+    }
+
+    pub fn write_to_file(&self) -> std::io::Result<()> {
+        let mut app_root = crate::exe_path()?;
+        app_root.push(".cache/");
+        std::fs::create_dir_all(&app_root)?;
+        app_root.push("library.dat");
+
+        let mut f = File::create(app_root)?;
+        let data = bincode::serde
+            ::encode_to_vec(self, bincode::config::standard())
+            .unwrap();
+        f.write_all(&data)
     }
 }
 

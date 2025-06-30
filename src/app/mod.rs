@@ -70,6 +70,8 @@ impl App {
         let library = internal::scan(
             "/mnt/741ae10f-7ba3-487d-bc13-3953cbb02819/music".into(),
         );
+        let _ = library.write_to_file()
+            .inspect_err(|e| eprintln!("Problem caching library data: {e}"));
 
         let sink = rodio::Sink::try_new(&stream_handle).unwrap();
         sink.set_volume(0.5);
