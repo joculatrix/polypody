@@ -1,10 +1,13 @@
 use super::*;
+use config::Config;
 pub use view::ICON_FONT_BYTES;
 
 use iced::task::Task;
 
 use view::start_screen;
 
+mod config;
+mod playlist;
 mod view;
 
 #[derive(Debug, Clone)]
@@ -52,14 +55,13 @@ pub struct App {
     codec_registry: &'static CodecRegistry,
     probe: &'static Probe,
 
-    sink: rodio::Sink,
+    config: Config,
     library: Library,
 
+    sink: rodio::Sink,
     playing: Option<Track>,
     queue: Vec<u64>,
     show_queue: bool,
-    start_screen: Option<start_screen::StartScreen>,
-
     play_status: PlayStatus,
     repeat: RepeatStatus,
     playhead_position: f32,
@@ -70,32 +72,74 @@ pub struct App {
 
     mute: bool,
     volume: f32,
+    start_screen: Option<start_screen::StartScreen>,
+
 }
 
 impl App {
     pub fn new(stream_handle: rodio::OutputStreamHandle) -> Self {
-
-        let library = Library::new();
+        let (config, library, start_screen) =
+            match Config::from_file(Config::file_path().unwrap())
+        {
+            Ok(config) => {
+                let lib_cache_path = Library::file_path();
+                if let Ok(path) = lib_cache_path && path.exists() {
+                    let lib = {
+                        let config_lib_path = config.library.path.clone();
+                        Library::from_file(&path)
+                            .map_or_else(
+                                |_| internal::scan(&config_lib_path),
+                                |lib|
+                                    if lib.root_directory().path ==
+                                        config_lib_path
+                                        && !config.library.full_rescan_on_start
+                                    {
+                                        lib
+                                    } else {
+                                        internal::scan(&config_lib_path)
+                                    }
+                            )
+                    };
+                    (config, lib, None)
+                } else {
+                    (
+                        config,
+                        Library::new(),
+                        Some(start_screen::StartScreen::new())
+                    )
+                }
+            }
+            Err(e) => {
+                eprintln!("Couldn't read config: {e}");
+                (
+                    Config::default(),
+                    Library::new(),
+                    Some(start_screen::StartScreen::new())
+                )
+            }
+        };
 
         let sink = rodio::Sink::try_new(&stream_handle).unwrap();
-        sink.set_volume(0.5);
+        let volume = config.misc.default_volume.min(1.0).max(0.0);
+        sink.set_volume(volume);
 
         Self {
             codec_registry: symphonia::default::get_codecs(),
             probe: symphonia::default::get_probe(),
-            sink,
+            config,
             library,
+            sink,
             playing: None,
             queue: vec![],
             show_queue: false,
-            start_screen: Some(start_screen::StartScreen::new()),
             playhead_position: 0.0,
             seeking: false,
             play_status: PlayStatus::Stopped,
             repeat: RepeatStatus::None,
             track_duration: None,
             mute: false,
-            volume: 0.5,
+            volume,
+            start_screen,
         }
     }
 
@@ -187,6 +231,8 @@ impl App {
                 self.library = start.lib.unwrap_unchecked();
                 let _ = self.library.write_to_file()
                     .inspect_err(|e| eprintln!("Problem caching library data: {e}"));
+                self.config.library.path = start.path.into();
+                self.config.write_to_file(&Config::file_path().unwrap());
                 Task::none()
             }
             Message::Shuffle => {

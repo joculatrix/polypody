@@ -7,7 +7,7 @@ use iced::{ widget::{ column, horizontal_space, row, text, text_input, vertical_
 pub struct StartScreen {
     error: bool,
     pub lib: Option<Library>,
-    path: String,
+    pub path: String,
     scanning: bool,
 }
 
@@ -51,7 +51,7 @@ impl StartScreen {
                 match path.try_exists() {
                     Ok(true) => {
                         self.scanning = true;
-                        Task::done(Message::Lib(crate::internal::scan(path)))
+                        Task::done(Message::Lib(crate::internal::scan(&path)))
                     }
                     Ok(false) => {
                         eprintln!("Given library path does not exist!");

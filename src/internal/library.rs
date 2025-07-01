@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fs::File, io::Write, path::PathBuf};
+use std::{collections::HashMap, error::Error, fs::File, io::{BufReader, Write}, path::PathBuf};
 use xxhash_rust::xxh3::xxh3_64;
 
 use super::{ Directory, Track };
@@ -73,13 +73,23 @@ impl Library {
         self.curr_dir = id;
     }
 
-    pub fn write_to_file(&self) -> std::io::Result<()> {
-        let mut app_root = crate::exe_path()?;
-        app_root.push(".cache/");
-        std::fs::create_dir_all(&app_root)?;
-        app_root.push("library.dat");
+    pub fn file_path() -> std::io::Result<PathBuf> {
+        let mut path = crate::exe_path()?;
+        path.push(".cache/");
+        std::fs::create_dir_all(&path)?;
+        path.push("library");
+        Ok(path)
+    }
 
-        let mut f = File::create(app_root)?;
+    pub fn from_file(path: &PathBuf) -> Result<Self, Box<dyn Error>> {
+        Ok(bincode::serde::decode_from_reader(
+            BufReader::new(File::open(path)?),
+            bincode::config::standard()
+        )?)
+    }
+
+    pub fn write_to_file(&self) -> std::io::Result<()> {
+        let mut f = File::create(Self::file_path()?)?;
         let data = bincode::serde
             ::encode_to_vec(self, bincode::config::standard())
             .unwrap();

@@ -8,7 +8,6 @@ pub use scan::scan;
 
 pub mod audio;
 pub mod library;
-pub mod playlist;
 pub mod scan;
 
 

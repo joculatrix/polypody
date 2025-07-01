@@ -5,11 +5,11 @@ enum ScanResult {
     Image(PathBuf),
 }
 
-pub fn scan(path: PathBuf) -> Library {
+pub fn scan(path: &PathBuf) -> Library {
     let mut lib = Library::new();
     let root = scan_dir(&mut lib, path.clone())
         .unwrap_or_else(|| {
-            lib.add_directory(Directory::new(path))
+            lib.add_directory(Directory::new(path.clone()))
         });
     lib.set_root(root);
     lib
