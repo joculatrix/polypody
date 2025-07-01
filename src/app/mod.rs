@@ -1,21 +1,27 @@
 use super::*;
 pub use view::ICON_FONT_BYTES;
 
+use iced::task::Task;
+
+use view::start_screen;
+
 mod view;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub enum Message {
     AppendTrack(usize),
-    QueueRemove(usize),
-    QueueSwap(usize, usize),
     PlayFolder,
     PlayTrack(usize),
     PlayheadMoved(f32),
     PlayheadReleased,
+    QueueRemove(usize),
+    QueueSwap(usize, usize),
+    ScanDone,
     Shuffle,
     ShuffleFolder,
     SkipBack,
     SkipForward,
+    StartScreen(start_screen::Message),
     Stop,
     ToggleMute,
     TogglePlay,
@@ -52,6 +58,7 @@ pub struct App {
     playing: Option<Track>,
     queue: Vec<u64>,
     show_queue: bool,
+    start_screen: Option<start_screen::StartScreen>,
 
     play_status: PlayStatus,
     repeat: RepeatStatus,
@@ -67,11 +74,8 @@ pub struct App {
 
 impl App {
     pub fn new(stream_handle: rodio::OutputStreamHandle) -> Self {
-        let library = internal::scan(
-            "/mnt/741ae10f-7ba3-487d-bc13-3953cbb02819/music".into(),
-        );
-        let _ = library.write_to_file()
-            .inspect_err(|e| eprintln!("Problem caching library data: {e}"));
+
+        let library = Library::new();
 
         let sink = rodio::Sink::try_new(&stream_handle).unwrap();
         sink.set_volume(0.5);
@@ -84,6 +88,7 @@ impl App {
             playing: None,
             queue: vec![],
             show_queue: false,
+            start_screen: Some(start_screen::StartScreen::new()),
             playhead_position: 0.0,
             seeking: false,
             play_status: PlayStatus::Stopped,
@@ -123,20 +128,11 @@ impl App {
         self.play_status = PlayStatus::Stopped;
     }
 
-    pub fn update(&mut self, message: Message) {
+    pub fn update(&mut self, message: Message) -> Task<Message> {
         match message {
             Message::AppendTrack(index) => {
                 self.queue.push(self.library.current_directory().tracks[index]);
-            }
-            Message::QueueRemove(index) => {
-                self.queue.remove(index);
-            }
-            Message::QueueSwap(a, b) => {
-                if b >= self.queue.len() {
-                    return;
-                } else {
-                    self.queue.swap(a, b);
-                }
+                Task::none()
             }
             Message::PlayFolder => {
                 let tracks = &self.library.current_directory().tracks;
@@ -147,35 +143,57 @@ impl App {
                     );
                 self.stop();
                 self.play_next();
+                Task::none()
             }
             Message::PlayTrack(index) => {
                 self.queue.clear();
                 self.queue.push(self.library.current_directory().tracks[index]);
                 self.play_next();
+                Task::none()
             }
             Message::PlayheadMoved(val) => {
                 self.playhead_position = val;
                 self.seeking = true;
 
                 let Some(_playing) = &self.playing else {
-                    return;
+                    return Task::none();
                 };
 
                 let Some((_, duration)) = &self.track_duration else {
-                    return;
+                    return Task::none();
                 };
 
                 let seek_pos = Duration::from_secs(
                     (val * duration.as_secs_f32()) as u64);
                 self.sink.try_seek(seek_pos);
+                Task::none()
             }
             Message::PlayheadReleased => {
                 self.seeking = false;
+                Task::none()
+            }
+            Message::QueueRemove(index) => {
+                self.queue.remove(index);
+                Task::none()
+            }
+            Message::QueueSwap(a, b) => {
+                if b < self.queue.len() {
+                    self.queue.swap(a, b);
+                }
+                Task::none()
+            }
+            Message::ScanDone => unsafe {
+                let start = self.start_screen.take().unwrap_unchecked();
+                self.library = start.lib.unwrap_unchecked();
+                let _ = self.library.write_to_file()
+                    .inspect_err(|e| eprintln!("Problem caching library data: {e}"));
+                Task::none()
             }
             Message::Shuffle => {
                 use rand::{ rng, seq::SliceRandom };
 
                 self.queue.shuffle(&mut rng());
+                Task::none()
             }
             Message::ShuffleFolder => {
                 use rand::{ rng, seq::SliceRandom };
@@ -190,10 +208,11 @@ impl App {
                 }
                 self.stop();
                 self.play_next();
+                Task::none()
             }
             Message::SkipBack => {
                 let Some(playing) = &self.playing else {
-                    return;
+                    return Task::none();
                 };
                 match self.repeat {
                     RepeatStatus::None | RepeatStatus::One => {
@@ -201,7 +220,7 @@ impl App {
                     }
                     RepeatStatus::All => {
                         let Some((current, _)) = &self.track_duration else {
-                            return;
+                            return Task::none();
                         };
                         if current.as_secs() <= 1 && !self.queue.is_empty() {
                             self.queue.insert(0, track_hash(playing));
@@ -215,10 +234,11 @@ impl App {
                         }
                     }
                 }
+                Task::none()
             }
             Message::SkipForward => {
                 let Some(playing) = &self.playing else {
-                    return;
+                    return Task::none();
                 };
                 match self.repeat {
                     RepeatStatus::All => {
@@ -231,11 +251,25 @@ impl App {
                 } else {
                     self.stop();
                 }
+                Task::none()
+            }
+            Message::StartScreen(msg) => {
+                if let Some(start) = &mut self.start_screen {
+                    if let Some(_) = &start.lib {
+                        Task::done(Message::ScanDone)
+                    } else {
+                        start.update(msg)
+                            .map(|s_msg| Message::StartScreen(s_msg))
+                    }
+                } else {
+                    Task::none()
+                }
             }
             Message::Stop => {
                 self.play_status = PlayStatus::Stopped;
                 self.queue.clear();
                 self.stop();
+                Task::none()
             }
             Message::ToggleMute => {
                 self.mute = !self.mute;
@@ -244,6 +278,7 @@ impl App {
                 } else {
                     self.sink.set_volume(self.volume);
                 }
+                Task::none()
             }
             Message::TogglePlay => {
                 self.play_status = match self.play_status {
@@ -256,6 +291,7 @@ impl App {
                         PlayStatus::Play
                     }
                 };
+                Task::none()
             },
             Message::ToggleRepeat => {
                 self.repeat = match self.repeat {
@@ -263,21 +299,26 @@ impl App {
                     RepeatStatus::One => RepeatStatus::All,
                     RepeatStatus::All => RepeatStatus::None,
                 };
+                Task::none()
             },
             Message::ToggleShowQueue => {
                 self.show_queue = !self.show_queue;
+                Task::none()
             }
             Message::UpdateProgress => {
                 self.update_progress();
+                Task::none()
             }
             Message::ViewLibrary(id) => {
                 self.library.set_current(id); 
+                Task::none()
             }
             Message::VolumeChanged(val) => {
                 self.volume = val;
                 self.sink.set_volume(val);
+                Task::none()
             }
-            _ => (),
+            _ => Task::none(),
         }
     }
 

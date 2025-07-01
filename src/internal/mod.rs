@@ -12,7 +12,7 @@ pub mod playlist;
 pub mod scan;
 
 
-#[derive(Debug, serde::Deserialize, serde::Serialize)]
+#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
 pub struct Directory {
     pub parent: u64,
     pub path: PathBuf,

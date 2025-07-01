@@ -7,7 +7,10 @@ enum ScanResult {
 
 pub fn scan(path: PathBuf) -> Library {
     let mut lib = Library::new();
-    let root = scan_dir(&mut lib, path).unwrap();
+    let root = scan_dir(&mut lib, path.clone())
+        .unwrap_or_else(|| {
+            lib.add_directory(Directory::new(path))
+        });
     lib.set_root(root);
     lib
 }

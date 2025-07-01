@@ -11,6 +11,7 @@ use std::time::Duration;
 
 mod controls;
 mod library;
+pub mod start_screen;
 mod style;
 
 pub const ICON_FONT_BYTES: &[u8] = include_bytes!("../../../fonts/lucide.ttf");
@@ -23,6 +24,7 @@ const SMALL_TEXT_SIZE: u16 = 12;
 type Element<'a> = iced::Element<'a, Message>;
 
 enum Icon {
+    ArrowCornerDL,
     ArrowCornerDR,
     ArrowCornerLU,
     ChevronDown,
@@ -47,6 +49,7 @@ enum Icon {
 impl From<Icon> for char {
     fn from(value: Icon) -> char {
         match value {
+            Icon::ArrowCornerDL =>  '\u{E0A5}',
             Icon::ArrowCornerDR =>  '\u{E0A6}',
             Icon::ArrowCornerLU =>  '\u{E0A8}',
             Icon::ChevronDown =>    '\u{E071}',
@@ -70,7 +73,7 @@ impl From<Icon> for char {
     }
 }
 
-fn icon_button(icon: Icon, text_size: u16) -> Button<'static, Message> {
+fn icon_button<M>(icon: Icon, text_size: u16) -> Button<'static, M> {
     button(
         text!("{}", char::from(icon))
             .font(ICON_FONT)
@@ -85,9 +88,9 @@ macro_rules! control_button {
         control_button!($icon, $msg, $style)
     };
     ($icon:expr, $msg:expr, $style:expr) => {
-        icon_button($icon, CONTROL_BUTTON_SIZE / 2)
-            .width(CONTROL_BUTTON_SIZE)
-            .height(CONTROL_BUTTON_SIZE)
+        crate::app::view::icon_button($icon, crate::app::view::CONTROL_BUTTON_SIZE / 2)
+            .width(crate::app::view::CONTROL_BUTTON_SIZE)
+            .height(crate::app::view::CONTROL_BUTTON_SIZE)
             .style($style)
             .on_press($msg)
     }
@@ -105,6 +108,14 @@ pub(self) use fill;
 
 impl App {
     pub fn view (&self) -> Element {
+        if let Some(start) = &self.start_screen {
+            start.view().map(|s_msg| Message::StartScreen(s_msg))
+        } else {
+            self.main_screen()
+        }
+    }
+
+    fn main_screen(&self) -> Element {
         container(
             column![
                 container(

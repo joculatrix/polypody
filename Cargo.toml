@@ -12,6 +12,7 @@ id3 = "1.16.3"
 lewton = "0.10.2"
 mp3-duration = "0.1.10"
 rand = "0.9.1"
+rfd = { version = "0.15.3", default-features = false, features = [ "tokio", "xdg-portal" ] }
 ringbuf = "0.4.8"
 serde = { version = "1.0.219", features = ["derive"] }
 toml = "0.8.23"
