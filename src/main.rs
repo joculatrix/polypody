@@ -15,8 +15,7 @@ pub mod app;
 pub mod internal;
 
 
-#[tokio::main]
-async fn main() -> iced::Result {
+fn main() -> iced::Result {
     let (_stream, stream_handle) = rodio::OutputStream::try_default().unwrap();
 
     iced::application("Music player", App::update, App::view)
