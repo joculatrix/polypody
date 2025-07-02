@@ -1,5 +1,6 @@
 use super::*;
 use config::Config;
+use playlist::PlaylistMap;
 pub use view::ICON_FONT_BYTES;
 
 use iced::task::Task;
@@ -35,6 +36,7 @@ pub enum Message {
     ToggleRepeat,
     UpdateProgress,
     ViewLibrary(u64),
+    ViewPlaylist(Option<u64>),
     VolumeChanged(f32),
 }
 
@@ -60,12 +62,19 @@ pub enum RepeatStatus {
     All,
 }
 
+pub enum Viewing {
+    Library,
+    Playlist(Option<u64>),
+}
+
 pub struct App {
     codec_registry: &'static CodecRegistry,
     probe: &'static Probe,
 
     config: Config,
     library: Library,
+    playlists: PlaylistMap,
+    viewing: Viewing,
 
     sink: rodio::Sink,
     playing: Option<Track>,
@@ -136,6 +145,8 @@ impl App {
             probe: symphonia::default::get_probe(),
             config,
             library,
+            playlists: PlaylistMap::new(),
+            viewing: Viewing::Library,
             sink,
             playing: None,
             queue: vec![],
@@ -401,7 +412,12 @@ impl App {
                 Task::none()
             }
             Message::ViewLibrary(id) => {
-                self.library.set_current(id); 
+                self.library.set_current(id);
+                self.viewing = Viewing::Library;
+                Task::none()
+            }
+            Message::ViewPlaylist(val) => {
+                self.viewing = Viewing::Playlist(val);
                 Task::none()
             }
             Message::VolumeChanged(val) => {

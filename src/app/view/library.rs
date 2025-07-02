@@ -51,7 +51,7 @@ impl App {
             .into()
     }
 
-    fn track_list_item(track: &Track, num: usize) -> Element {
+    pub(super) fn track_list_item(track: &Track, num: usize) -> Element {
         container(
             row![
                 text!("{}    ", num)

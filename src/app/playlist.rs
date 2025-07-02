@@ -1,12 +1,36 @@
-use std::{error::Error, path::PathBuf};
+use std::{ collections::{hash_map, HashMap}, error::Error, path::PathBuf };
 
 use serde::{ Deserialize, Serialize };
 
+pub struct PlaylistMap {
+    map: HashMap<u64, Playlist>,
+}
+
+impl PlaylistMap {
+    pub fn new() -> Self {
+        Self { map: HashMap::new() }
+    }
+
+    pub fn add_playlist(&mut self, pl: Playlist) -> u64 {
+        let id = xxhash_rust::xxh3::xxh3_64(pl.filename.as_bytes());
+        self.map.insert(id, pl);
+        id
+    }
+
+    pub fn get_playlist(&self, id: u64) -> Option<&Playlist> {
+        self.map.get(&id)
+    }
+
+    pub fn playlists(&self) -> hash_map::Iter<'_, u64, Playlist> {
+        self.map.iter()
+    }
+}
+
 pub struct Playlist {
-    filename: String,
-    title: String,
-    img: Option<PathBuf>,
-    tracks: Vec<PlaylistTrack>,
+    pub filename: String,
+    pub title: String,
+    pub img: Option<PathBuf>,
+    pub tracks: Vec<PlaylistTrack>,
 }
 
 #[derive(Clone)]

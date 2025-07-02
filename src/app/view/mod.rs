@@ -11,6 +11,7 @@ use std::time::Duration;
 
 mod controls;
 mod library;
+mod playlist;
 pub mod start_screen;
 mod style;
 
@@ -129,7 +130,11 @@ impl App {
                 row![
                     self.sidebar(),
                     iced::widget::vertical_space().width(5),
-                    self.library_view(),
+                    match self.viewing {
+                        Viewing::Library => self.library_view(),
+                        Viewing::Playlist(None) => self.view_playlists(),
+                        _ => todo!(),
+                    },
                     iced::widget::vertical_space().width(5),                    
                     self.queue_view(),
                 ],
@@ -169,23 +174,30 @@ impl App {
             .on_press(Message::ViewLibrary(self.library.root_dir))
             .width(iced::Length::Fill)
             .height(48)
-            .style(|theme: &iced::Theme, status: button::Status| {
-                let palette = theme.extended_palette();
-                button::Style {
-                    text_color: palette.background.base.text,
-                    background: match status {
-                        button::Status::Hovered | button::Status::Pressed =>
-                            iced::Color::parse("#242226").map(|c| c.into()),
-                        _ => Some(palette.background.base.color.into()),
-                    },
-                    border: iced::Border {
-                        color: palette.background.base.text.scale_alpha(0.2),
-                        width: 1.0,
-                        radius: (2.0).into()
-                    },
-                    ..button::Style::default()
-                }
-            })
+            .style(style::sidebar_section_button)
+            .into();
+
+        let playlists_btn = button(
+            row![
+                text!("{}", char::from(Icon::FileMusic))
+                    .font(ICON_FONT)
+                    .size(CONTROL_BUTTON_SIZE / 2)
+                    .align_y(iced::Alignment::Center),
+                text(" Playlists")
+                    .font(Font {
+                        weight: iced::font::Weight::Bold,
+                        ..Font::default()
+                    })
+                    .size(TEXT_SIZE)
+                    .align_y(iced::Alignment::Center),
+            ]
+                .height(iced::Length::Fill)
+                .align_y(iced::Alignment::Center),
+        )
+            .on_press(Message::ViewPlaylist(None))
+            .width(iced::Length::Fill)
+            .height(48)
+            .style(style::sidebar_section_button)
             .into();
 
         let mut contents = vec![];
@@ -199,6 +211,20 @@ impl App {
                     name,
                     Message::ViewLibrary(crate::internal::library::path_hash(dir)),
                     PinKind::Library,
+                    i,
+                ));
+            });
+        contents.push(playlists_btn);
+        self.config.playlists.pins
+            .iter()
+            .enumerate()
+            .for_each(|(i, pl)| {
+                let id = crate::internal::library::path_hash(pl);
+                let pl = self.playlists.get_playlist(id).unwrap();
+                contents.push(Self::sidebar_item(
+                    pl.title.clone(),
+                    Message::ViewPlaylist(Some(id)),
+                    PinKind::Playlist,
                     i,
                 ));
             });

@@ -249,6 +249,27 @@ pub(super) fn clean_slider(
     }
 }
 
+pub(super) fn sidebar_section_button(
+    theme: &iced::Theme,
+    status: button::Status
+) -> button::Style {
+    let palette = theme.extended_palette();
+    button::Style {
+        text_color: palette.background.base.text,
+        background: match status {
+            button::Status::Hovered | button::Status::Pressed =>
+                iced::Color::parse("#242226").map(|c| c.into()),
+            _ => Some(palette.background.base.color.into()),
+        },
+        border: iced::Border {
+            color: palette.background.base.text.scale_alpha(0.2),
+            width: 1.0,
+            radius: (2.0).into()
+        },
+        ..button::Style::default()
+    }
+}
+
 pub(super) fn track_list_container(
     theme: &iced::Theme,
 ) -> container::Style {
