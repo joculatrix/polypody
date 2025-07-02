@@ -6,8 +6,13 @@ pub struct Playlist {
     filename: String,
     title: String,
     img: Option<PathBuf>,
-    tracks: Vec<(u64, PathBuf)>,
-    unresolved: Vec<PathBuf>,
+    tracks: Vec<PlaylistTrack>,
+}
+
+#[derive(Clone)]
+pub enum PlaylistTrack {
+    Track(u64, PathBuf),
+    Unresolved(PathBuf),
 }
 
 #[derive(Deserialize, Serialize)]
@@ -22,16 +27,18 @@ impl Playlist {
         let title = toml.title;
         let img = toml.img.map(|s| PathBuf::from(s));
         let mut tracks = Vec::with_capacity(toml.tracks.capacity());
-        let mut unresolved = vec![];
         for track in toml.tracks {
             let track = PathBuf::from(track);
             if track.try_exists().is_ok_and(|x| x) {
-                tracks.push((crate::internal::library::path_hash(&track), track));
+                tracks.push(PlaylistTrack::Track(
+                    crate::internal::library::path_hash(&track),
+                    track
+                ));
             } else {
-                unresolved.push(track);
+                tracks.push(PlaylistTrack::Unresolved(track));
             }
         }
-        Self { filename, title, img, tracks, unresolved }
+        Self { filename, title, img, tracks }
     }
 
     pub fn file_path(&self) -> Result<PathBuf, Box<dyn Error>> {
@@ -49,7 +56,10 @@ impl Playlist {
             tracks: self.tracks
                 .clone()
                 .into_iter()
-                .map(|(_, path)| path.to_str().unwrap().to_owned())
+                .map(|x| match x {
+                    PlaylistTrack::Track(_, path) => path.to_str().unwrap().to_owned(),
+                    PlaylistTrack::Unresolved(path) => path.to_str().unwrap().to_owned(),
+                })
                 .collect(),
         };
         Ok(toml::to_string_pretty(&playlist)?)
