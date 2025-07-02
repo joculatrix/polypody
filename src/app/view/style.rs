@@ -249,7 +249,7 @@ pub(super) fn clean_slider(
     }
 }
 
-pub(super) fn sidebar_section_button(
+pub(super) fn outlined_button(
     theme: &iced::Theme,
     status: button::Status
 ) -> button::Style {

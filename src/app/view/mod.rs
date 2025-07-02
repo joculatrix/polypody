@@ -174,7 +174,7 @@ impl App {
             .on_press(Message::ViewLibrary(self.library.root_dir))
             .width(iced::Length::Fill)
             .height(48)
-            .style(style::sidebar_section_button)
+            .style(style::outlined_button)
             .into();
 
         let playlists_btn = button(
@@ -197,7 +197,7 @@ impl App {
             .on_press(Message::ViewPlaylist(None))
             .width(iced::Length::Fill)
             .height(48)
-            .style(style::sidebar_section_button)
+            .style(style::outlined_button)
             .into();
 
         let mut contents = vec![];

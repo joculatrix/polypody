@@ -201,9 +201,9 @@ impl App {
                                 row![
                                     text!("{}", char::from(Icon::ArrowCornerLU))
                                         .font(ICON_FONT)
-                                        .size(TEXT_SIZE),
+                                        .size(SMALL_TEXT_SIZE),
                                     text!(" back")
-                                        .size(TEXT_SIZE),
+                                        .size(SMALL_TEXT_SIZE),
                                 ]
                             )
                                 .style(style::plain_icon_button)

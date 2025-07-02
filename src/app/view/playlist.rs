@@ -1,7 +1,7 @@
 use crate::app::{playlist::Playlist, App};
 use super::*;
 
-use iced::widget::{ button, container, column, row, scrollable };
+use iced::widget::{ button, column, container, row, scrollable };
 
 impl App {
     fn playlist_list_item(playlist: &Playlist) -> Element {
@@ -55,15 +55,38 @@ impl App {
             .into()
     }
 
+    fn playlist_list_header() -> Element<'static> {
+        container(
+            column![
+                text("Playlists")
+                    .size(20),
+            ]
+        )
+            .width(iced::Length::Fill)
+            .height(148)
+            .padding(20)
+            .style(|theme: &iced::Theme| {
+                let palette = theme.extended_palette();
+
+                container::Style {
+                    text_color: Some(palette.background.base.text),
+                    background: Some(palette.background.base.color.into()),
+                    ..container::Style::default()
+                }
+            })
+            .into()
+    }
+
     pub fn view_playlists(&self) -> Element {
         let mut playlists = self.playlists.playlists()
             .map(|(_, pl)| pl)
             .collect::<Vec<_>>();
         playlists.sort_unstable_by_key(|pl| &pl.title);
-        let contents = playlists
+        let mut contents = playlists
             .into_iter()
             .map(|pl| Self::playlist_list_item(pl))
             .collect::<Vec<_>>();
+        contents.insert(0, Self::playlist_list_header());
 
         container(
             scrollable(column(contents))
