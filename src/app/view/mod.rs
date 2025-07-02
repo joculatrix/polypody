@@ -203,9 +203,24 @@ impl App {
                 ));
             });
 
-        scrollable(
-            column(contents)
+        container(
+            scrollable(
+                column(contents)
+            )
         )
+            .style(|theme: &iced::Theme| {
+                let palette = theme.extended_palette();
+
+                container::Style {
+                    border: iced::Border {
+                        color: palette.background.base.text.scale_alpha(0.2),
+                        width: 1.0,
+                        radius: (2.0).into(),
+                    },
+                    ..container::Style::default()
+                }
+            })
+            .padding(1)
             .width(iced::Length::FillPortion(3))
             .height(iced::Length::Fill)
             .into()
