@@ -29,8 +29,12 @@ enum Icon {
     ArrowCornerLU,
     ChevronDown,
     ChevronUp,
+    DiscAlbum,
+    FileMusic,
     Folder,
     Pause,
+    Pin,
+    PinOff,
     Play,
     Plus,
     Queue,
@@ -54,8 +58,12 @@ impl From<Icon> for char {
             Icon::ArrowCornerLU =>  '\u{E0A8}',
             Icon::ChevronDown =>    '\u{E071}',
             Icon::ChevronUp =>      '\u{E074}',
+            Icon::DiscAlbum =>      '\u{E561}',
+            Icon::FileMusic =>      '\u{E563}',
             Icon::Folder =>         '\u{E0DB}',
             Icon::Pause =>          '\u{E132}',
+            Icon::Pin =>            '\u{E259}',
+            Icon::PinOff =>         '\u{E2B6}',
             Icon::Play =>           '\u{E140}',
             Icon::Plus =>           '\u{E141}',
             Icon::Queue =>          '\u{E2E0}',
@@ -128,6 +136,8 @@ impl App {
                     .align_x(iced::Alignment::End)
                     .width(iced::Length::Fill),
                 row![
+                    self.sidebar(),
+                    iced::widget::vertical_space().width(5),
                     self.library_view(),
                     iced::widget::vertical_space().width(5),                    
                     self.queue_view(),
@@ -145,6 +155,143 @@ impl App {
             .height(iced::Length::Fill)
             .padding(10)
             .into()
+    }
+
+    fn sidebar(&self) -> Element {
+        let library_btn = button(
+            row![
+                text!("{}", char::from(Icon::DiscAlbum))
+                    .font(ICON_FONT)
+                    .size(CONTROL_BUTTON_SIZE / 2)
+                    .align_y(iced::Alignment::Center),
+                text(" Library")
+                    .font(Font {
+                        weight: iced::font::Weight::Bold,
+                        ..Font::default()
+                    })
+                    .size(TEXT_SIZE)
+                    .align_y(iced::Alignment::Center),
+            ]
+                .height(iced::Length::Fill)
+                .align_y(iced::Alignment::Center),
+        )
+            .on_press(Message::ViewLibrary(self.library.root_dir))
+            .width(iced::Length::Fill)
+            .height(48)
+            .style(|theme: &iced::Theme, status: button::Status| {
+                let palette = theme.extended_palette();
+                button::Style {
+                    text_color: palette.background.base.text,
+                    background: match status {
+                        button::Status::Hovered | button::Status::Pressed =>
+                            iced::Color::parse("#242226").map(|c| c.into()),
+                        _ => Some(palette.background.base.color.into()),
+                    },
+                    border: iced::Border {
+                        color: palette.background.base.text,
+                        width: 1.0,
+                        radius: (2.0).into()
+                    },
+                    ..button::Style::default()
+                }
+            })
+            .into();
+
+        let mut contents = vec![];
+        contents.push(library_btn);
+        self.config.library.pins
+            .iter()
+            .enumerate()
+            .for_each(|(i, dir)| {
+                let name = dir.file_name().unwrap().to_str().unwrap().to_owned();
+                contents.push(Self::sidebar_item(
+                    name,
+                    Message::ViewLibrary(crate::internal::library::path_hash(dir)),
+                    PinKind::Library,
+                    i,
+                ));
+            });
+
+        scrollable(
+            column(contents)
+        )
+            .width(iced::Length::FillPortion(3))
+            .height(iced::Length::Fill)
+            .into()
+    }
+
+    fn sidebar_item(
+        txt: String,
+        msg: Message,
+        pin_kind: PinKind,
+        num: usize
+    ) -> Element<'static> {
+        iced::widget::hover(
+            container(
+                button(
+                    text(txt)
+                        .size(TEXT_SIZE)
+                        .align_y(iced::Alignment::Center)
+                        .height(iced::Length::Fill)
+                )
+                    .style(|theme: &iced::Theme, status: button::Status| {
+                        let palette = theme.extended_palette();
+                        button::Style {
+                            text_color: palette.background.base.text,
+                            background: match status {
+                                button::Status::Hovered | button::Status::Pressed =>
+                                    iced::Color::parse("#242226").map(|c| c.into()),
+                                _ => Some(palette.background.base.color.into()),
+                            },
+                            ..button::Style::default()
+                        }
+                    })
+                    .width(iced::Length::Fill)
+                    .height(iced::Length::Fill)
+                    .on_press(msg)
+            )
+                .width(iced::Length::Fill)
+                .height(42),
+            container(
+                row![
+                    column![
+                        icon_button(Icon::ChevronUp, 12)
+                            .on_press(Message::PinSwap(
+                                pin_kind,
+                                num,
+                                num.saturating_sub(1)
+                            ))
+                            .padding(1)
+                            .style(style::plain_icon_button_with_colors(
+                                iced::Color::parse("#242226").map(|c| c.into()),
+                                None
+                            )),
+                        icon_button(Icon::ChevronDown, 12)
+                            .on_press(Message::PinSwap(
+                                pin_kind,
+                                num,
+                                num.saturating_add(1)
+                            ))
+                            .padding(1)
+                            .style(style::plain_icon_button_with_colors(
+                                iced::Color::parse("#242226").map(|c| c.into()),
+                                None
+                            )),
+                    ],
+                    control_button!(
+                        icon: Icon::PinOff,
+                        msg: Message::PinRemove(pin_kind, num),
+                        style: style::plain_icon_button,
+                    )
+                ]
+                    .height(iced::Length::Fill)
+                    .align_y(iced::Alignment::Center)
+            )
+                .align_x(iced::Alignment::End)
+                .padding(iced::Padding { right: 5.0, ..iced::Padding::default() })
+                .width(iced::Length::Fill)
+                .height(iced::Length::Fill)
+        ) 
     }
 
     fn queue_item(num: usize, track: &Track) -> Element {

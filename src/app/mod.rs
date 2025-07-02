@@ -13,6 +13,10 @@ mod view;
 #[derive(Debug, Clone)]
 pub enum Message {
     AppendTrack(usize),
+    None,
+    PinAdd(PinKind, PathBuf),
+    PinRemove(PinKind, usize),
+    PinSwap(PinKind, usize, usize),
     PlayFolder,
     PlayTrack(usize),
     PlayheadMoved(f32),
@@ -33,6 +37,12 @@ pub enum Message {
     UpdateProgress,
     ViewLibrary(u64),
     VolumeChanged(f32),
+}
+
+#[derive(Copy, Clone, Debug)]
+pub enum PinKind {
+    Library,
+    Playlist,
 }
 
 #[derive(Copy, Clone, Default)]
@@ -172,11 +182,50 @@ impl App {
         self.play_status = PlayStatus::Stopped;
     }
 
+    fn write_config(&self) -> Task<Message> {
+        let config = self.config.clone();
+        Task::future(tokio::spawn(async move {
+            config.write_to_file(&Config::file_path().unwrap());
+        }))
+            .map(|_| Message::None)
+    }
+
     pub fn update(&mut self, message: Message) -> Task<Message> {
         match message {
             Message::AppendTrack(index) => {
                 self.queue.push(self.library.current_directory().tracks[index]);
                 Task::none()
+            }
+            Message::PinAdd(kind, path) => {
+                match kind {
+                    PinKind::Library => {
+                        self.config.library.pins.push(path);
+                    }
+                    PinKind::Playlist => todo!(),
+                }
+                self.write_config()
+            }
+            Message::PinRemove(kind, index) => {
+                match kind {
+                    PinKind::Library => {
+                        self.config.library.pins.remove(index);
+                    }
+                    PinKind::Playlist => {
+                        self.config.playlists.pins.remove(index);
+                    }
+                }
+                self.write_config()
+            }
+            Message::PinSwap(kind, a, b) => {
+                match kind {
+                    PinKind::Library => {
+                        self.config.library.pins.swap(a, b);
+                    }
+                    PinKind::Playlist => {
+                        self.config.playlists.pins.swap(a, b);
+                    }
+                }
+                self.write_config()
             }
             Message::PlayFolder => {
                 let tracks = &self.library.current_directory().tracks;
@@ -232,8 +281,7 @@ impl App {
                 let _ = self.library.write_to_file()
                     .inspect_err(|e| eprintln!("Problem caching library data: {e}"));
                 self.config.library.path = start.path.into();
-                self.config.write_to_file(&Config::file_path().unwrap());
-                Task::none()
+                self.write_config()
             }
             Message::Shuffle => {
                 use rand::{ rng, seq::SliceRandom };

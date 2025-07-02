@@ -227,6 +227,11 @@ impl App {
                             msg: Message::ShuffleFolder,
                             style: style::plain_icon_button,
                         ),
+                        control_button!(
+                            icon: Icon::Pin,
+                            msg: Message::PinAdd(PinKind::Library, dir.path.clone()),
+                            style: style::plain_icon_button,
+                        )
                     ]
                 ]
                     .padding(5)

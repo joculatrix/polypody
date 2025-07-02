@@ -1,7 +1,7 @@
 use std::{ error::Error, fs::File, io::{Read, Write}, path::PathBuf };
 use serde::{ Deserialize, Serialize };
 
-#[derive(Default, Deserialize, Serialize)]
+#[derive(Clone, Default, Deserialize, Serialize)]
 pub struct Config {
     pub library: Library,
     pub playlists: Playlists,
@@ -29,7 +29,7 @@ impl Config {
     }
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Clone, Deserialize, Serialize)]
 pub struct Library {
     pub path: PathBuf,
     pub full_rescan_on_start: bool,
@@ -46,7 +46,7 @@ impl Default for Library {
     }
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Clone, Deserialize, Serialize)]
 pub struct Playlists {
     pub pins: Vec<PathBuf>,
 }
@@ -57,7 +57,7 @@ impl Default for Playlists {
     }
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Clone, Deserialize, Serialize)]
 pub struct Misc {
     pub default_volume: f32,
 }

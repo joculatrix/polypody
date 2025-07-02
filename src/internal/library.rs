@@ -5,8 +5,8 @@ use super::{ Directory, Track };
 
 #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
 pub struct Library {
-    root_dir: u64,
-    curr_dir: u64,
+    pub root_dir: u64,
+    pub curr_dir: u64,
 
     dir_registry: HashMap<u64, Directory>,
     track_registry: HashMap<u64, Track>,
