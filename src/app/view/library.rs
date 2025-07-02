@@ -336,7 +336,7 @@ impl App {
         )
             .style(style::track_list_container)
             .padding(2)
-            .width(iced::Length::FillPortion(9))
+            .width(iced::Length::FillPortion(10))
             .height(iced::Length::Fill)
             .into()
     }

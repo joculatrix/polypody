@@ -33,7 +33,6 @@ pub enum Message {
     ToggleMute,
     TogglePlay,
     ToggleRepeat,
-    ToggleShowQueue,
     UpdateProgress,
     ViewLibrary(u64),
     VolumeChanged(f32),
@@ -71,7 +70,6 @@ pub struct App {
     sink: rodio::Sink,
     playing: Option<Track>,
     queue: Vec<u64>,
-    show_queue: bool,
     play_status: PlayStatus,
     repeat: RepeatStatus,
     playhead_position: f32,
@@ -141,7 +139,6 @@ impl App {
             sink,
             playing: None,
             queue: vec![],
-            show_queue: false,
             playhead_position: 0.0,
             seeking: false,
             play_status: PlayStatus::Stopped,
@@ -219,10 +216,14 @@ impl App {
             Message::PinSwap(kind, a, b) => {
                 match kind {
                     PinKind::Library => {
-                        self.config.library.pins.swap(a, b);
+                        if b < self.config.library.pins.len() {
+                            self.config.library.pins.swap(a, b);
+                        }
                     }
                     PinKind::Playlist => {
-                        self.config.playlists.pins.swap(a, b);
+                        if b < self.config.playlists.pins.len() {
+                            self.config.playlists.pins.swap(a, b);
+                        }
                     }
                 }
                 self.write_config()
@@ -395,10 +396,6 @@ impl App {
                 };
                 Task::none()
             },
-            Message::ToggleShowQueue => {
-                self.show_queue = !self.show_queue;
-                Task::none()
-            }
             Message::UpdateProgress => {
                 self.update_progress();
                 Task::none()

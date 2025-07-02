@@ -126,15 +126,6 @@ impl App {
     fn main_screen(&self) -> Element {
         container(
             column![
-                container(
-                    control_button!(
-                        icon: Icon::Queue,
-                        msg: Message::ToggleShowQueue,
-                        style: style::toggle_icon_button(self.show_queue),
-                    )
-                )
-                    .align_x(iced::Alignment::End)
-                    .width(iced::Length::Fill),
                 row![
                     self.sidebar(),
                     iced::widget::vertical_space().width(5),
@@ -188,7 +179,7 @@ impl App {
                         _ => Some(palette.background.base.color.into()),
                     },
                     border: iced::Border {
-                        color: palette.background.base.text,
+                        color: palette.background.base.text.scale_alpha(0.2),
                         width: 1.0,
                         radius: (2.0).into()
                     },
@@ -343,10 +334,7 @@ impl App {
                     control_button!(
                         icon: Icon::Trash,
                         msg: Message::QueueRemove(num),
-                        style: style::plain_icon_button_with_colors(
-                            iced::Color::parse("#242226").map(|c| c.into()),
-                            None,
-                        )
+                        style: style::plain_icon_button,
                     )
                 ]
                     .height(iced::Length::Fill)
@@ -362,33 +350,27 @@ impl App {
     fn queue_view(&self) -> Element {
         let mut contents = vec![];
 
-        if self.show_queue {
-            let queue = self.queue.iter()
-                .enumerate()
-                .map(|(i, track)| {
-                    let track = self.library.get_track(*track).unwrap();
-                    Self::queue_item(i, track)
-                })
-                .collect::<Vec<_>>();
-            contents.push(
-                container(
-                    scrollable(
-                        column(queue)
-                    )
+        let queue = self.queue.iter()
+            .enumerate()
+            .map(|(i, track)| {
+                let track = self.library.get_track(*track).unwrap();
+                Self::queue_item(i, track)
+            })
+            .collect::<Vec<_>>();
+        contents.push(
+            container(
+                scrollable(
+                    column(queue)
                 )
-                    .style(style::track_list_container)
-                    .width(iced::Length::Fill)
-                    .height(iced::Length::Fill)
-                    .into()
             )
-        }
+                .style(style::track_list_container)
+                .width(iced::Length::Fill)
+                .height(iced::Length::Fill)
+                .into()
+        );
 
         column(contents)
-            .width(if self.show_queue {
-                    iced::Length::FillPortion(3)
-                } else {
-                    iced::Length::Shrink
-                })
+            .width(iced::Length::FillPortion(3))
             .height(iced::Length::Fill)
             .into()
     }
