@@ -1,4 +1,4 @@
-use std::{ collections::{hash_map, HashMap}, error::Error, path::PathBuf };
+use std::{ collections::{hash_map, HashMap}, error::Error, fs::File, io::Read, path::PathBuf };
 
 use serde::{ Deserialize, Serialize };
 
@@ -23,6 +23,38 @@ impl PlaylistMap {
 
     pub fn playlists(&self) -> hash_map::Iter<'_, u64, Playlist> {
         self.map.iter()
+    }
+
+    pub fn scan_playlists(&mut self) -> Result<(), Box<dyn Error>> {
+        let mut path = crate::exe_path()?;
+        path.push("playlists/");
+        if !path.exists() {
+            return Ok(());
+        }
+        for entry in path.read_dir().unwrap().into_iter() {
+            if let Err(e) = entry {
+                eprintln!("Error reading entry: {e}");
+            } else if let Ok(entry) = entry {
+                let path = entry.path();
+                let Some(extension) = path.extension() else {
+                    continue;
+                };
+                if extension.to_str().unwrap() == "toml" {
+                    let mut file = File::open(&path)?;
+                    let mut s = String::new();
+                    file.read_to_string(&mut s)?;
+                    let Ok(toml) = toml::from_str(&s) else {
+                        continue;
+                    };
+                    let pl = Playlist::new(
+                        toml,
+                        path.file_name().unwrap().to_str().unwrap().to_owned()
+                    );
+                    self.add_playlist(pl);
+                }
+            }
+        }
+        Ok(())
     }
 }
 

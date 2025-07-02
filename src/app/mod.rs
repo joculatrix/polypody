@@ -136,6 +136,9 @@ impl App {
             }
         };
 
+        let mut playlists = PlaylistMap::new();
+        playlists.scan_playlists();
+
         let sink = rodio::Sink::try_new(&stream_handle).unwrap();
         let volume = config.misc.default_volume.min(1.0).max(0.0);
         sink.set_volume(volume);
@@ -145,7 +148,7 @@ impl App {
             probe: symphonia::default::get_probe(),
             config,
             library,
-            playlists: PlaylistMap::new(),
+            playlists,
             viewing: Viewing::Library,
             sink,
             playing: None,
