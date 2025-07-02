@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 pub use library::Library;
-pub use scan::scan;
+pub use scan::{ scan, partial_scan };
 
 pub mod audio;
 pub mod library;

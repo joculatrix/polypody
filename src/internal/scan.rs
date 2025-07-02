@@ -15,6 +15,11 @@ pub fn scan(path: &PathBuf) -> Library {
     lib
 }
 
+pub fn partial_scan(path: &PathBuf, mut lib: Library) -> Library {
+    scan_dir(&mut lib, path.clone());
+    lib
+}
+
 fn scan_file(path: &PathBuf) -> Option<ScanResult> {
     let Some(extension) = path.extension() else { return None; };
     let extension = extension.to_str().unwrap();
@@ -244,39 +249,37 @@ fn read_ape(path: &PathBuf) -> Option<Metadata> {
     }
 }
 
-fn scan_dir(lib: &mut Library, path: PathBuf) -> Option<u64> {
-    let path = path.as_path();
+fn scan_dir(lib: &mut Library, path_buf: PathBuf) -> Option<u64> {
+    let path = path_buf.as_path();
     assert!(path.is_dir());
 
-    let mut dir = Directory::new(path.to_owned());
+    let mut dir = match lib.get_directory_mut(library::path_hash(&path_buf)) {
+        Some(dir) => dir.clone(),
+        None => Directory::new(path_buf.clone()),
+    };
+
     let mut tracks_temp = vec![];
     let mut imgs_temp = vec![];
 
     for entry in path.read_dir().unwrap().into_iter() {
-        if let Err(e) = entry {
-            match e.kind() {
-                std::io::ErrorKind::PermissionDenied => todo!(),
-                std::io::ErrorKind::TimedOut => todo!(),
-                std::io::ErrorKind::NotSeekable => todo!(),
-                std::io::ErrorKind::QuotaExceeded => todo!(),
-                std::io::ErrorKind::FileTooLarge => todo!(),
-                std::io::ErrorKind::ResourceBusy => todo!(),
-                std::io::ErrorKind::Deadlock => todo!(),
-                std::io::ErrorKind::CrossesDevices => todo!(),
-                std::io::ErrorKind::Interrupted => todo!(),
-                std::io::ErrorKind::OutOfMemory => todo!(),
-                std::io::ErrorKind::Other => todo!(),
-                _ => todo!(),
-            }
+        if let Err(_e) = entry {
+            todo!()
         } else if let Ok(entry) = entry {
             match entry.file_type() {
                 Ok(ft) => {
                     if ft.is_dir() {
                         scan_dir(lib, entry.path())
                             .inspect(|id|
-                                dir.subdirs.push(*id)
+                                if !dir.subdirs.contains(id) {
+                                    dir.subdirs.push(*id)
+                                }
                             );
                     } else {
+                        if lib.get_track(library::path_hash(&entry.path()))
+                            .is_some()
+                        {
+                            continue;
+                        }
                         match scan_file(&entry.path()) {
                             Some(ScanResult::Image(data)) => {
                                 imgs_temp.push(data);
@@ -293,23 +296,31 @@ fn scan_dir(lib: &mut Library, path: PathBuf) -> Option<u64> {
         }
     }
 
-    tracks_temp.sort_unstable_by_key(|track|
-        (
-            track.metadata.discnum,
-            track.metadata.num,
-            track.metadata.title.clone(),
-            track.path.clone()
-        ));
-    dir.tracks = tracks_temp.into_iter()
-        .map(|track| lib.add_track(track))
-        .collect();
+    if tracks_temp.len() != 0 {
+        dir.tracks
+            .iter()
+            .map(|t| unsafe { lib.get_track(*t).unwrap_unchecked() })
+            .for_each(|t| tracks_temp.push(t.clone()));
+        tracks_temp.sort_unstable_by_key(|track|
+            (
+                track.metadata.discnum,
+                track.metadata.num,
+                track.metadata.title.clone(),
+                track.path.clone()
+            ));
+        dir.tracks = tracks_temp.into_iter()
+            .map(|track| lib.add_track(track))
+            .collect();
+    }
 
-    dir.img = sort_images(imgs_temp, &dir.path);
+    if dir.img.is_none() {
+        dir.img = sort_images(imgs_temp, &dir.path);
+    }
 
     if dir.subdirs.is_empty() && dir.tracks.is_empty() {
         None
     } else {
-        Some(lib.add_directory(dir))
+        Some(lib.add_directory(dir.to_owned()))
     } 
 }
 

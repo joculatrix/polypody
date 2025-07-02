@@ -104,7 +104,7 @@ impl App {
                                         config_lib_path
                                         && !config.library.full_rescan_on_start
                                     {
-                                        lib
+                                        internal::partial_scan(&config_lib_path, lib)
                                     } else {
                                         internal::scan(&config_lib_path)
                                     }
