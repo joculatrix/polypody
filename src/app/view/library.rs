@@ -114,11 +114,11 @@ impl App {
             .into()
     }
 
-    fn track_buttons(index: usize) -> Element<'static> {
+    fn track_buttons(id: u64) -> Element<'static> {
         row![
             control_button!(
                 icon: Icon::Play,
-                msg: Message::PlayTrack(index),
+                msg: Message::PlayTrack(id),
                 style: style::plain_icon_button_with_colors(
                     iced::Color::parse("#242226").map(|c| c.into()),
                     None
@@ -127,7 +127,7 @@ impl App {
                 .width(iced::Length::FillPortion(1)),
             control_button!(
                 icon: Icon::Plus,
-                msg: Message::AppendTrack(index),
+                msg: Message::AppendTrack(id),
                 style: style::plain_icon_button_with_colors(
                     iced::Color::parse("#242226").map(|c| c.into()),
                     None
@@ -140,25 +140,25 @@ impl App {
             .into()
     }
 
-    fn library_track_view(track: &Track, num: usize) -> Element {
+    pub(super) fn library_track_view(track: &Track, id: u64, num: usize) -> Element {
         let internal_track_index = unsafe {
             num.unchecked_sub(1)
         };
         iced_aw::ContextMenu::new(
             iced::widget::hover(
                 Self::track_list_item(track, num),
-                Self::track_buttons(internal_track_index),
+                Self::track_buttons(id),
             ),
             move || {
                 container(
                     column(vec![
                         button("Play")
-                            .on_press(Message::PlayTrack(internal_track_index))
+                            .on_press(Message::PlayTrack(id))
                             .width(iced::Length::Fill)
                             .style(style::context_menu_button)
                             .into(),
                         button("Add to queue")
-                            .on_press(Message::AppendTrack(internal_track_index))
+                            .on_press(Message::AppendTrack(id))
                             .width(iced::Length::Fill)
                             .style(style::context_menu_button)
                             .into(),
@@ -252,7 +252,7 @@ impl App {
             .into()
     }
 
-    fn tracks_header(draw: bool) -> Element<'static> {
+    pub(super) fn tracks_header(draw: bool) -> Element<'static> {
         container(
             if draw {
                 row![
@@ -307,14 +307,14 @@ impl App {
             .tracks
             .iter()
             .map(|id| unsafe {
-                self.library.get_track(*id).unwrap_unchecked()
+                (*id, self.library.get_track(*id).unwrap_unchecked())
             })
             .collect::<Vec<_>>();    
 
         let track_items = tracks
             .into_iter()
             .enumerate()
-            .map(|(i, track)| Self::library_track_view(track, i + 1));
+            .map(|(i, (id, track))| Self::library_track_view(track, id, i + 1));
 
         container(
             column![

@@ -1,6 +1,6 @@
 use super::*;
 use config::Config;
-use playlist::PlaylistMap;
+use playlist::{PlaylistMap, PlaylistTrack};
 pub use view::ICON_FONT_BYTES;
 
 use iced::task::Task;
@@ -13,13 +13,14 @@ mod view;
 
 #[derive(Debug, Clone)]
 pub enum Message {
-    AppendTrack(usize),
+    AppendTrack(u64),
     None,
     PinAdd(PinKind, PathBuf),
     PinRemove(PinKind, usize),
     PinSwap(PinKind, usize, usize),
     PlayFolder,
-    PlayTrack(usize),
+    PlayList,
+    PlayTrack(u64),
     PlayheadMoved(f32),
     PlayheadReleased,
     QueueRemove(usize),
@@ -27,6 +28,7 @@ pub enum Message {
     ScanDone,
     Shuffle,
     ShuffleFolder,
+    ShuffleList,
     SkipBack,
     SkipForward,
     StartScreen(start_screen::Message),
@@ -165,6 +167,9 @@ impl App {
     }
 
     fn play_next(&mut self) {
+        if self.queue.len() == 0 {
+            return;
+        }
         let track = self.queue.remove(0);
         let track = self.library.get_track(track).unwrap();
         self.playing = Some(track.clone());
@@ -203,8 +208,8 @@ impl App {
 
     pub fn update(&mut self, message: Message) -> Task<Message> {
         match message {
-            Message::AppendTrack(index) => {
-                self.queue.push(self.library.current_directory().tracks[index]);
+            Message::AppendTrack(id) => {
+                self.queue.push(id);
                 Task::none()
             }
             Message::PinAdd(kind, path) => {
@@ -212,7 +217,9 @@ impl App {
                     PinKind::Library => {
                         self.config.library.pins.push(path);
                     }
-                    PinKind::Playlist => todo!(),
+                    PinKind::Playlist => {
+                        self.config.playlists.pins.push(path);
+                    }
                 }
                 self.write_config()
             }
@@ -245,17 +252,33 @@ impl App {
             Message::PlayFolder => {
                 let tracks = &self.library.current_directory().tracks;
                 self.queue.resize(tracks.len(), 0);
-                self.queue
-                    .copy_from_slice(
-                        &self.library.current_directory().tracks
-                    );
+                self.queue.copy_from_slice(tracks);
                 self.stop();
                 self.play_next();
                 Task::none()
             }
-            Message::PlayTrack(index) => {
+            Message::PlayList => {
+                let Viewing::Playlist(Some(list)) = self.viewing else {
+                    return Task::none();
+                };
+                let tracks = self.playlists.get_playlist(list).unwrap()
+                    .tracks
+                    .iter()
+                    .map(|track| match track {
+                        PlaylistTrack::Track(id, _) => Some(*id),
+                        _ => None,
+                    })
+                    .flatten()
+                    .collect::<Vec<_>>();
+                self.queue.resize(tracks.len(), 0);
+                self.queue.copy_from_slice(&tracks);
+                self.stop();
+                self.play_next();
+                Task::none()
+            }
+            Message::PlayTrack(id) => {
                 self.queue.clear();
-                self.queue.push(self.library.current_directory().tracks[index]);
+                self.queue.push(id);
                 self.play_next();
                 Task::none()
             }
@@ -319,6 +342,32 @@ impl App {
                 self.play_next();
                 Task::none()
             }
+            Message::ShuffleList => {
+                use rand::{ rng, seq::SliceRandom };
+
+                let Viewing::Playlist(Some(list)) = self.viewing else {
+                    return Task::none();
+                };
+                let tracks = self.playlists.get_playlist(list).unwrap()
+                    .tracks
+                    .iter()
+                    .map(|track| match track {
+                        PlaylistTrack::Track(id, _) => Some(*id),
+                        _ => None,
+                    })
+                    .flatten()
+                    .collect::<Vec<_>>();
+                self.queue.resize(tracks.len(), 0);
+                let mut shuffle = (0..tracks.len())
+                    .collect::<Vec<usize>>();
+                shuffle.shuffle(&mut rng());
+                for (i, j) in shuffle.into_iter().enumerate() {
+                    self.queue[i] = tracks[j];
+                }
+                self.stop();
+                self.play_next();
+                Task::none()
+            }
             Message::SkipBack => {
                 let Some(playing) = &self.playing else {
                     return Task::none();
@@ -355,11 +404,8 @@ impl App {
                     }
                     _ => (),
                 }
-                if !self.queue.is_empty() {
-                    self.play_next();
-                } else {
-                    self.stop();
-                }
+                self.stop();
+                self.play_next();
                 Task::none()
             }
             Message::StartScreen(msg) => {

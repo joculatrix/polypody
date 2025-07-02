@@ -102,4 +102,111 @@ impl App {
             .height(iced::Length::Fill)
             .into()
     }
+
+    fn playlist_header(pl: &Playlist) -> Element {
+        container(
+            row![
+                container(
+                    match &pl.img {
+                        Some(img_path) => {
+                            let img = image(img_path)
+                                .content_fit(iced::ContentFit::Cover)
+                                .width(128)
+                                .width(128);
+                            <image::Image as Into<iced::Element<Message>>>::into(img)
+                        }
+                        None => text!("{}", char::from(Icon::FileMusic))
+                            .font(ICON_FONT)
+                            .size(64)
+                            .center()
+                            .into(),
+                    }
+                )
+                    .center(138)
+                    .padding(5),
+                column![
+                    text!("{}", pl.title)
+                        .size(20)
+                        .align_x(iced::Alignment::Start),
+                    text!("({})", pl.filename)
+                        .size(SMALL_TEXT_SIZE)
+                        .align_x(iced::Alignment::Start),
+                    row![
+                        control_button!(
+                            icon: Icon::Play,
+                            msg: Message::PlayList,
+                            style: style::plain_icon_button,
+                        ),
+                        control_button!(
+                            icon: Icon::Shuffle,
+                            msg: Message::ShuffleList,
+                            style: style::plain_icon_button,
+                        ),
+                        control_button!(
+                            icon: Icon::Pin,
+                            msg: Message::PinAdd(
+                                PinKind::Playlist,
+                                pl.filename.clone().into()
+                            ),
+                            style: style::plain_icon_button,
+                        )
+                    ]
+                ]
+                    .padding(5)
+            ]
+        )
+            .width(iced::Length::Fill)
+            .height(148)
+            .padding(5)
+            .style(|theme: &iced::Theme| {
+                let palette = theme.extended_palette();
+
+                container::Style {
+                    text_color: Some(palette.background.base.text),
+                    background: Some(palette.background.base.color.into()),
+                    ..container::Style::default()
+                }
+            })
+            .into()
+    }
+
+    pub fn playlist_view(&self, id: u64) -> Element {
+        let pl = self.playlists.get_playlist(id).unwrap();
+
+        let mut contents = pl.tracks
+            .iter()
+            .map(|t| match t {
+                PlaylistTrack::Track(id, _) => {
+                    match self.library.get_track(*id) {
+                        Some(track) => Some((*id, track)),
+                        None => None,
+                    }
+                }
+                PlaylistTrack::Unresolved(_) => None,
+            })
+            .flatten()
+            .enumerate()
+            .map(|(num, (id, track))| Self::library_track_view(track, id, num + 1))
+            .collect::<Vec<_>>();
+        contents.insert(0, Self::tracks_header(!contents.is_empty()));
+
+        container(
+            column![
+                Self::playlist_header(pl),
+                scrollable(
+                    column(contents)
+                )
+                    .direction(scrollable::Direction::Vertical(
+                        scrollable::Scrollbar::default()))
+                    .spacing(0)
+                    .width(iced::Length::Fill)
+                    .height(iced::Length::Fill)
+            ]
+        )
+            .style(style::track_list_container)
+            .padding(2)
+            .width(iced::Length::FillPortion(10))
+            .height(iced::Length::Fill)
+            .into()
+    }
 }

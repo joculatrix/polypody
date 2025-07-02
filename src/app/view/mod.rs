@@ -133,7 +133,7 @@ impl App {
                     match self.viewing {
                         Viewing::Library => self.library_view(),
                         Viewing::Playlist(None) => self.view_playlists(),
-                        _ => todo!(),
+                        Viewing::Playlist(Some(id)) => self.playlist_view(id),
                     },
                     iced::widget::vertical_space().width(5),                    
                     self.queue_view(),
