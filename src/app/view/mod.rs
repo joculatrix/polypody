@@ -18,7 +18,7 @@ pub mod start_screen;
 mod style;
 mod tracks;
 
-pub const ICON_FONT_BYTES: &[u8] = include_bytes!("../../../fonts/lucide.ttf");
+pub const ICON_FONT_BYTES: &[u8] = include_bytes!("../../../res/font/lucide.ttf");
 const ICON_FONT: Font = Font::with_name("lucide");
 
 const CONTROL_BUTTON_SIZE: u16 = 36;

@@ -2335,31 +2335,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "music_player"
-version = "0.1.0"
-dependencies = [
- "ape",
- "bincode",
- "claxon",
- "hound",
- "iced",
- "iced_aw",
- "id3",
- "lewton",
- "mp3-duration",
- "paste",
- "rand 0.9.1",
- "rfd",
- "ringbuf",
- "rodio",
- "serde",
- "symphonia",
- "tokio",
- "toml",
- "xxhash-rust",
-]
-
-[[package]]
 name = "mutate_once"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3089,6 +3064,31 @@ name = "pollster"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2f3a9f18d041e6d0e102a0a46750538147e5e8992d3b4873aaafee2520b00ce3"
+
+[[package]]
+name = "polypody"
+version = "0.1.0"
+dependencies = [
+ "ape",
+ "bincode",
+ "claxon",
+ "hound",
+ "iced",
+ "iced_aw",
+ "id3",
+ "lewton",
+ "mp3-duration",
+ "paste",
+ "rand 0.9.1",
+ "rfd",
+ "ringbuf",
+ "rodio",
+ "serde",
+ "symphonia",
+ "tokio",
+ "toml",
+ "xxhash-rust",
+]
 
 [[package]]
 name = "portable-atomic"
