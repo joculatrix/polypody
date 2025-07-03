@@ -284,7 +284,7 @@ impl App {
             })
             .flatten()
             .enumerate()
-            .map(|(num, (id, track))| Self::track_view(track, id, num + 1))
+            .map(|(num, (id, track))| Self::track_view(track, id, num + 1, true))
             .collect::<Vec<_>>();
         contents.insert(0, Self::tracks_header(!contents.is_empty()));
 

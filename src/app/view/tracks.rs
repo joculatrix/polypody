@@ -119,7 +119,40 @@ impl App {
             .into()
     }
 
-    fn track_buttons(id: u64) -> Element<'static> {
+    fn track_buttons(id: u64, num: usize, playlist: bool) -> Element<'static> {
+        let right_hand: Element = if playlist {
+            container(
+                row![
+                    column![
+                        icon_button(Icon::ChevronUp, 16)
+                            .on_press(Message::PlaylistSwap(num, num.saturating_sub(1)))
+                            .padding(1)
+                            .style(style::plain_icon_button_with_colors(
+                                iced::Color::parse("#242226").map(|c| c.into()),
+                                None
+                            )),
+                        icon_button(Icon::ChevronDown, 16)
+                            .on_press(Message::PlaylistSwap(num, num.saturating_add(1)))
+                            .padding(1)
+                            .style(style::plain_icon_button_with_colors(
+                                iced::Color::parse("#242226").map(|c| c.into()),
+                                None
+                            )),
+                    ],
+                    control_button!(
+                        icon: Icon::Trash,
+                        msg: Message::PlaylistRemove(num),
+                        style: style::plain_icon_button,
+                    )
+                ]
+            )
+                .align_x(iced::Alignment::End)
+                .width(iced::Length::FillPortion(24))
+                .height(iced::Length::Fill)
+                .into()
+        } else {
+            vertical_space().width(iced::Length::FillPortion(24)).into()
+        };
         row![
             control_button!(
                 icon: Icon::Play,
@@ -139,17 +172,22 @@ impl App {
                 ),
             )
                 .width(iced::Length::FillPortion(1)),
-            vertical_space().width(iced::Length::FillPortion(24)),
+            right_hand,
         ]
             .align_y(iced::Alignment::Center)
             .into()
     }
 
-    pub(super) fn track_view(track: &Track, id: u64, num: usize) -> Element {
+    pub(super) fn track_view(
+        track: &Track,
+        id: u64,
+        num: usize,
+        playlist: bool
+    ) -> Element {
         iced_aw::ContextMenu::new(
             iced::widget::hover(
                 Self::track_list_item(track, num),
-                Self::track_buttons(id),
+                Self::track_buttons(id, num - 1, playlist),
             ),
             move || {
                 container(

@@ -28,7 +28,9 @@ pub enum Message {
     PlayFolder,
     PlayList,
     PlaylistPathChanged(String),
+    PlaylistRemove(usize),
     PlaylistSelected(u64),
+    PlaylistSwap(usize, usize),
     PlaylistTitleChanged(String),
     PlayTrack(u64),
     PlayheadMoved(f32),
@@ -358,6 +360,15 @@ impl App {
                 self.new_playlist_path = s;
                 Task::none()
             }
+            Message::PlaylistRemove(index) => unsafe {
+                let Viewing::Playlist(Some(id)) = self.viewing else {
+                    return Task::none();
+                };
+                let pl = self.playlists.get_playlist_mut(id).unwrap_unchecked();
+                pl.tracks.remove(index);
+                pl.write_to_file();
+                Task::none()
+            }
             Message::PlaylistSelected(pl_id) => unsafe {
                 let track_id = self.selecting_playlist.unwrap_unchecked();
                 let pl = self.playlists.get_playlist_mut(pl_id).unwrap_unchecked();
@@ -367,6 +378,17 @@ impl App {
                         .path.clone(),
                 ));
                 self.selecting_playlist = None;
+                pl.write_to_file();
+                Task::none()
+            }
+            Message::PlaylistSwap(a, b) => unsafe {
+                let Viewing::Playlist(Some(id)) = self.viewing else {
+                    return Task::none();
+                };
+                let pl = self.playlists.get_playlist_mut(id).unwrap_unchecked();
+                if b < pl.tracks.len() {
+                    pl.tracks.swap(a, b);
+                }
                 pl.write_to_file();
                 Task::none()
             }

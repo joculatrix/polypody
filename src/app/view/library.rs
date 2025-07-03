@@ -192,7 +192,7 @@ impl App {
         let track_items = tracks
             .into_iter()
             .enumerate()
-            .map(|(i, (id, track))| Self::track_view(track, id, i + 1));
+            .map(|(i, (id, track))| Self::track_view(track, id, i + 1, false));
 
         let main_elem = container(
             column![
