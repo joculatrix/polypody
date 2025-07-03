@@ -30,6 +30,10 @@ impl PlaylistMap {
         self.map.iter()
     }
 
+    pub fn remove_playlist(&mut self, id: u64) -> Option<Playlist> {
+        self.map.remove(&id)
+    }
+
     pub fn scan_playlists(&mut self) -> Result<(), Box<dyn Error>> {
         let mut path = crate::exe_path()?;
         path.push("playlists/");
@@ -63,6 +67,7 @@ impl PlaylistMap {
     }
 }
 
+#[derive(Clone)]
 pub struct Playlist {
     pub filename: String,
     pub title: String,

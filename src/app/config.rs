@@ -1,6 +1,8 @@
 use std::{ error::Error, fs::File, io::{Read, Write}, path::PathBuf };
 use serde::{ Deserialize, Serialize };
 
+use crate::internal::library::path_hash;
+
 #[derive(Clone, Default, Deserialize, Serialize)]
 pub struct Config {
     pub library: Library,
@@ -20,6 +22,30 @@ impl Config {
         let mut path = crate::exe_path()?;
         path.push("config.toml");
         Ok(path)
+    }
+
+    pub fn verify_pins(self, lib: &crate::internal::Library) -> Self {
+        Self {
+            library: Library {
+                pins: self.library.pins
+                    .into_iter()
+                    .filter(|p| lib.get_directory(path_hash(p)).is_some())
+                    .collect(),
+                ..self.library
+            },
+            playlists: Playlists {
+                pins: self.playlists.pins
+                    .into_iter()
+                    .filter(|p|
+                        crate::exe_path().unwrap()
+                            .join("playlists/")
+                            .join(p)
+                            .exists()
+                    )
+                    .collect()
+            },
+            ..self
+        }
     }
 
     pub fn write_to_file(&self, path: &PathBuf) -> Result<(), Box<dyn Error>> {

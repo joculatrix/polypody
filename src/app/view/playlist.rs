@@ -1,7 +1,7 @@
 use crate::app::{playlist::Playlist, App};
 use super::*;
 
-use iced::widget::{ button, column, container, horizontal_space, row, scrollable, stack, text_input, vertical_space };
+use iced::widget::{ button, column, container, horizontal_space, hover, row, scrollable, stack, text_input, vertical_space };
 
 impl App {
     fn new_playlist_menu(&self) -> Element {
@@ -70,7 +70,7 @@ impl App {
             .into()
     }
 
-    fn playlist_list_item_view(playlist: &Playlist) -> Element {
+    fn playlist_list_item_view(playlist: Playlist) -> Element<'static> {
         button(
             row![
                 container(
@@ -155,12 +155,30 @@ impl App {
 
     pub fn playlist_list_view(&self) -> Element {
         let mut playlists = self.playlists.playlists()
-            .map(|(_, pl)| pl)
+            .map(|(id, pl)| (*id, pl.to_owned()))
             .collect::<Vec<_>>();
-        playlists.sort_unstable_by_key(|pl| &pl.title);
+        playlists.sort_unstable_by_key(|(_, pl)| pl.title.clone());
         let mut contents = playlists
             .into_iter()
-            .map(|pl| Self::playlist_list_item_view(pl))
+            .map(|(id, pl)|
+                hover(
+                    Self::playlist_list_item_view(pl),
+                    container(
+                        control_button!(
+                            icon: Icon::Trash,
+                            msg: Message::DeletePlaylist(id),
+                            style: style::plain_icon_button_with_colors(
+                                iced::Color::parse("#242226").map(|c| c.into()),
+                                None
+                            )
+                        )
+                    )
+                        .width(iced::Length::Fill)
+                        .height(iced::Length::Fill)
+                        .align_x(iced::Alignment::End)
+                        .align_y(iced::Alignment::Center)
+                )
+            )
             .collect::<Vec<_>>();
         contents.insert(0, Self::playlist_list_header_view());
 

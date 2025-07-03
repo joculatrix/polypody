@@ -17,6 +17,7 @@ pub enum Message {
     CancelCreatePlaylist,
     CloseAddToPlaylist,
     CreatePlaylist,
+    DeletePlaylist(u64),
     ImgPathChanged(String),
     ImgSelected(Option<rfd::FileHandle>),
     None,
@@ -157,6 +158,8 @@ impl App {
             }
         };
 
+        let config = config.verify_pins(&library);
+
         let mut playlists = PlaylistMap::new();
         playlists.scan_playlists();
 
@@ -266,6 +269,19 @@ impl App {
                 self.playlists.scan_playlists();
                 self.new_playlist_menu = false;
                 Task::none()
+            }
+            Message::DeletePlaylist(id) => {
+                let Some(pl) = self.playlists.remove_playlist(id) else {
+                    return Task::none();
+                };
+                let path = pl.file_path().unwrap();
+                std::fs::remove_file(&path);
+                self.config.playlists.pins = self.config.playlists.pins
+                    .iter()
+                    .filter(|p| p.to_str().unwrap() != pl.filename)
+                    .map(|p| p.to_owned())
+                    .collect();
+                self.write_config()
             }
             Message::ImgPathChanged(s) => {
                 self.new_playlist_img = s;
