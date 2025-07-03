@@ -4,7 +4,7 @@ use super::*;
 use iced::widget::{ button, column, container, row, scrollable };
 
 impl App {
-    fn playlist_list_item(playlist: &Playlist) -> Element {
+    fn playlist_list_item_view(playlist: &Playlist) -> Element {
         button(
             row![
                 container(
@@ -55,7 +55,7 @@ impl App {
             .into()
     }
 
-    fn playlist_list_header() -> Element<'static> {
+    fn playlist_list_header_view() -> Element<'static> {
         container(
             column![
                 text("Playlists")
@@ -77,16 +77,16 @@ impl App {
             .into()
     }
 
-    pub fn view_playlists(&self) -> Element {
+    pub fn playlist_list_view(&self) -> Element {
         let mut playlists = self.playlists.playlists()
             .map(|(_, pl)| pl)
             .collect::<Vec<_>>();
         playlists.sort_unstable_by_key(|pl| &pl.title);
         let mut contents = playlists
             .into_iter()
-            .map(|pl| Self::playlist_list_item(pl))
+            .map(|pl| Self::playlist_list_item_view(pl))
             .collect::<Vec<_>>();
-        contents.insert(0, Self::playlist_list_header());
+        contents.insert(0, Self::playlist_list_header_view());
 
         container(
             scrollable(column(contents))
@@ -103,7 +103,7 @@ impl App {
             .into()
     }
 
-    fn playlist_header(pl: &Playlist) -> Element {
+    fn playlist_header_view(pl: &Playlist) -> Element {
         container(
             row![
                 container(
@@ -170,7 +170,7 @@ impl App {
             .into()
     }
 
-    pub fn playlist_view(&self, id: u64) -> Element {
+    pub(super) fn playlist_view(&self, id: u64) -> Element {
         let pl = self.playlists.get_playlist(id).unwrap();
 
         let mut contents = pl.tracks
@@ -186,13 +186,13 @@ impl App {
             })
             .flatten()
             .enumerate()
-            .map(|(num, (id, track))| Self::library_track_view(track, id, num + 1))
+            .map(|(num, (id, track))| Self::track_view(track, id, num + 1))
             .collect::<Vec<_>>();
         contents.insert(0, Self::tracks_header(!contents.is_empty()));
 
         container(
             column![
-                Self::playlist_header(pl),
+                Self::playlist_header_view(pl),
                 scrollable(
                     column(contents)
                 )
