@@ -1,4 +1,4 @@
-use std::{ collections::{hash_map, HashMap}, error::Error, fs::File, io::Read, path::PathBuf };
+use std::{ collections::{hash_map, HashMap}, error::Error, fs::File, io::{Read, Write}, path::PathBuf };
 
 use serde::{ Deserialize, Serialize };
 
@@ -46,7 +46,7 @@ impl PlaylistMap {
                     let Ok(toml) = toml::from_str(&s) else {
                         continue;
                     };
-                    let pl = Playlist::new(
+                    let pl = Playlist::from_toml(
                         toml,
                         path.file_name().unwrap().to_str().unwrap().to_owned()
                     );
@@ -79,7 +79,16 @@ struct TomlPlaylist {
 }
 
 impl Playlist {
-    fn new(toml: TomlPlaylist, filename: String) -> Self {
+    pub fn new(
+        title: String,
+        filename: String,
+        img: Option<PathBuf>,
+        tracks: Vec<PlaylistTrack>
+    ) -> Self {
+        Self { title, filename,img, tracks }
+    }
+
+    pub fn from_toml(toml: TomlPlaylist, filename: String) -> Self {
         let title = toml.title;
         let img = toml.img.map(|s| PathBuf::from(s));
         let mut tracks = Vec::with_capacity(toml.tracks.capacity());
@@ -119,5 +128,11 @@ impl Playlist {
                 .collect(),
         };
         Ok(toml::to_string_pretty(&playlist)?)
+    }
+
+    pub fn write_to_file(&self) -> Result<(), Box<dyn Error>> {
+        let mut f = File::create(self.file_path()?)?;
+        let toml = self.serialize()?;
+        Ok(f.write_all(toml.as_bytes())?)
     }
 }

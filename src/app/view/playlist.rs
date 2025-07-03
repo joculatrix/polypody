@@ -1,9 +1,75 @@
 use crate::app::{playlist::Playlist, App};
 use super::*;
 
-use iced::widget::{ button, column, container, row, scrollable };
+use iced::widget::{ button, column, container, horizontal_space, row, scrollable, stack, text_input, vertical_space };
 
 impl App {
+    fn new_playlist_menu(&self) -> Element {
+        container(
+            column![
+                text("New Playlist")
+                    .font(iced::Font {
+                        weight: iced::font::Weight::Bold,
+                        ..iced::Font::default()
+                    })
+                    .size(TEXT_SIZE)
+                    .center(),
+                horizontal_space().height(5),
+                text_input("Title", &self.new_playlist_title)
+                    .on_input(Message::PlaylistTitleChanged)
+                    .size(TEXT_SIZE)
+                    .width(iced::Length::Fill),
+                horizontal_space().height(5),
+                text_input(
+                    "Filename (without path or extension)",
+                    &self.new_playlist_path
+                )
+                    .on_input(Message::PlaylistPathChanged)
+                    .size(TEXT_SIZE)
+                    .width(iced::Length::Fill),
+                horizontal_space().height(5),
+                row![
+                    text_input(
+                        "Cover image path",
+                        &self.new_playlist_img
+                    )
+                        .on_input(Message::ImgPathChanged)
+                        .size(TEXT_SIZE)
+                        .width(iced::Length::Fill),
+                    control_button!(
+                        icon: Icon::Folder,
+                        msg: Message::OpenImgDialog,
+                        style: style::plain_icon_button,
+                    )
+                        .width(iced::Length::Shrink),
+                ],
+                horizontal_space().height(5),
+                row![
+                    button(text("Done").size(TEXT_SIZE))
+                        .on_press(Message::CreatePlaylist)
+                        .style(style::outlined_button)
+                        .width(iced::Length::Fill),
+                    vertical_space().width(5),
+                    button(text("Cancel").size(TEXT_SIZE))
+                        .on_press(Message::CancelCreatePlaylist)
+                        .style(style::outlined_button)
+                        .width(iced::Length::Fill),
+                ]
+            ]
+                .align_x(iced::Alignment::Center)
+        )
+            .padding(10)
+            .width(iced::Length::FillPortion(6))
+            .style(|theme: &iced::Theme| container::Style {
+                shadow: iced::Shadow {
+                    offset: iced::Vector::new(2.0, 2.0),
+                    ..iced::Shadow::default()
+                },
+                ..style::track_list_container(theme)
+            })
+            .into()
+    }
+
     fn playlist_list_item_view(playlist: &Playlist) -> Element {
         button(
             row![
@@ -60,6 +126,16 @@ impl App {
             column![
                 text("Playlists")
                     .size(20),
+                horizontal_space().height(5),
+                button(row![
+                    text!("{}", char::from(Icon::Plus))
+                        .font(ICON_FONT)
+                        .size(TEXT_SIZE),
+                    text(" New")
+                        .size(TEXT_SIZE),
+                ])
+                    .on_press(Message::OpenNewPlaylist)
+                    .style(style::outlined_button)
             ]
         )
             .width(iced::Length::Fill)
@@ -88,7 +164,7 @@ impl App {
             .collect::<Vec<_>>();
         contents.insert(0, Self::playlist_list_header_view());
 
-        container(
+        let main_elem = container(
             scrollable(column(contents))
                 .direction(scrollable::Direction::Vertical(
                     scrollable::Scrollbar::default()))
@@ -100,7 +176,29 @@ impl App {
             .padding(2)
             .width(iced::Length::FillPortion(10))
             .height(iced::Length::Fill)
-            .into()
+            .into();
+
+        if self.new_playlist_menu {
+            stack!(
+                main_elem,
+                container(
+                    column![
+                        horizontal_space().height(iced::Length::FillPortion(3)),
+                        row![
+                            vertical_space().width(iced::Length::FillPortion(2)),
+                            self.new_playlist_menu(),
+                            vertical_space().width(iced::Length::FillPortion(2)),
+                        ]
+                            .height(iced::Length::FillPortion(3)),
+                        horizontal_space().height(iced::Length::FillPortion(3)),
+                    ]
+                )
+                    .center(iced::Length::Fill)
+            )
+                .into()
+        } else {
+            main_elem
+        }
     }
 
     fn playlist_header_view(pl: &Playlist) -> Element {

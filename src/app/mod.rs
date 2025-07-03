@@ -1,6 +1,6 @@
 use super::*;
 use config::Config;
-use playlist::{PlaylistMap, PlaylistTrack};
+use playlist::{Playlist, PlaylistMap, PlaylistTrack};
 pub use view::ICON_FONT_BYTES;
 
 use iced::task::Task;
@@ -14,12 +14,20 @@ mod view;
 #[derive(Debug, Clone)]
 pub enum Message {
     AppendTrack(u64),
+    CreatePlaylist,
+    CancelCreatePlaylist,
+    ImgPathChanged(String),
+    ImgSelected(Option<rfd::FileHandle>),
     None,
+    OpenImgDialog,
+    OpenNewPlaylist,
     PinAdd(PinKind, PathBuf),
     PinRemove(PinKind, usize),
     PinSwap(PinKind, usize, usize),
     PlayFolder,
     PlayList,
+    PlaylistPathChanged(String),
+    PlaylistTitleChanged(String),
     PlayTrack(u64),
     PlayheadMoved(f32),
     PlayheadReleased,
@@ -93,6 +101,10 @@ pub struct App {
     volume: f32,
     start_screen: Option<start_screen::StartScreen>,
 
+    new_playlist_menu: bool,
+    new_playlist_title: String,
+    new_playlist_path: String,
+    new_playlist_img: String,
 }
 
 impl App {
@@ -163,6 +175,10 @@ impl App {
             mute: false,
             volume,
             start_screen,
+            new_playlist_menu: false,
+            new_playlist_title: String::new(),
+            new_playlist_path: String::new(),
+            new_playlist_img: String::new(),
         }
     }
 
@@ -210,6 +226,55 @@ impl App {
         match message {
             Message::AppendTrack(id) => {
                 self.queue.push(id);
+                Task::none()
+            }
+            Message::CancelCreatePlaylist => {
+                self.new_playlist_menu = false;
+                Task::none()
+            }
+            Message::CreatePlaylist => {
+                let img = {
+                    let path = PathBuf::from(&self.new_playlist_img);
+                    if path.exists() {
+                        Some(path)
+                    } else {
+                        None
+                    }
+                };
+                let pl = Playlist::new(
+                    self.new_playlist_title.clone(),
+                    format!("{}.toml", self.new_playlist_path),
+                    img,
+                    vec![],
+                );
+                pl.write_to_file();
+                self.playlists.scan_playlists();
+                self.new_playlist_menu = false;
+                Task::none()
+            }
+            Message::ImgPathChanged(s) => {
+                self.new_playlist_img = s;
+                Task::none()
+            }
+            Message::ImgSelected(fh) => {
+                if let Some(fh) = fh {
+                    self.new_playlist_img = fh.path().to_str().unwrap().to_owned();
+                }
+                Task::none()
+            }
+            Message::OpenImgDialog => {
+                Task::perform(
+                    rfd::AsyncFileDialog::new()
+                        .add_filter("image", &["png", "jpg", "jpeg"])
+                        .pick_file(),
+                    Message::ImgSelected,
+                )
+            }
+            Message::OpenNewPlaylist => {
+                self.new_playlist_title.clear();
+                self.new_playlist_img.clear();
+                self.new_playlist_path.clear();
+                self.new_playlist_menu = true;
                 Task::none()
             }
             Message::PinAdd(kind, path) => {
@@ -274,6 +339,14 @@ impl App {
                 self.queue.copy_from_slice(&tracks);
                 self.stop();
                 self.play_next();
+                Task::none()
+            }
+            Message::PlaylistPathChanged(s) => {
+                self.new_playlist_path = s;
+                Task::none()
+            }
+            Message::PlaylistTitleChanged(s) => {
+                self.new_playlist_title = s;
                 Task::none()
             }
             Message::PlayTrack(id) => {
