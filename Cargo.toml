@@ -24,7 +24,7 @@ features = [ "advanced", "image", "tokio" ]
 [dependencies.iced_aw]
 version = "0.12.2"
 default-features = false
-features = [ "context_menu" ]
+features = [ "context_menu", "menu" ]
 
 [dependencies.rodio]
 version = "0.20.1"

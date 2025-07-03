@@ -52,6 +52,7 @@ enum Icon {
     VolumeLow,
     VolumeMid,
     VolumeHigh,
+    X,
 }
 
 impl From<Icon> for char {
@@ -81,6 +82,7 @@ impl From<Icon> for char {
             Icon::VolumeLow =>      '\u{E1A9}',
             Icon::VolumeMid =>      '\u{E1AA}',
             Icon::VolumeHigh =>     '\u{E1AB}',
+            Icon::X =>              '\u{E1B2}',
         }
     }
 }

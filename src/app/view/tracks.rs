@@ -2,6 +2,60 @@ use super::{ *, column };
 use iced::widget::vertical_space;
 
 impl App {
+    pub(super) fn add_to_playlist_menu(&self) -> Element {
+        let content = self.playlists.playlists()
+            .map(|(id, pl)| {
+                button(
+                    text!("{}", pl.title)
+                        .size(TEXT_SIZE)
+                )
+                    .width(iced::Length::Fill)
+                    .on_press(Message::PlaylistSelected(*id))
+                    .style(style::plain_icon_button_with_colors(
+                        iced::Color::parse("#242226").map(|c| c.into()),
+                        None
+                    ))
+                    .into()
+            })
+            .collect::<Vec<_>>();
+
+        container(
+            column![
+                row![
+                    container(text("Add to playlist").size(20)),
+                    container(
+                        control_button!(
+                            icon: Icon::X,
+                            msg: Message::CloseAddToPlaylist,
+                            style: style::plain_icon_button_with_colors(
+                                iced::Color::parse("#242226").map(|c| c.into()),
+                                None
+                            )
+                        )
+                    )
+                        .width(iced::Length::Fill)
+                        .align_x(iced::Alignment::End),
+                ]
+                    .width(iced::Length::Fill),
+                scrollable(column(content))
+                    .spacing(0)
+            ]
+        )
+            .padding(10)
+            .style(|theme: &iced::Theme|
+                container::Style {
+                    shadow: iced::Shadow {
+                        offset: iced::Vector::new(2.0, 2.0),
+                        ..iced::Shadow::default()
+                    },
+                    ..style::track_list_container(theme)
+                }
+            )
+            .width(iced::Length::Fill)
+            .height(iced::Length::Fill)
+            .into()
+    }
+
     fn track_list_item(track: &Track, num: usize) -> Element {
         container(
             row![
@@ -110,10 +164,15 @@ impl App {
                             .width(iced::Length::Fill)
                             .style(style::context_menu_button)
                             .into(),
+                        button("Add to playlist...")
+                            .on_press(Message::SelectPlaylist(id))
+                            .width(iced::Length::Fill)
+                            .style(style::context_menu_button)
+                            .into(),
                     ])
                 )
                     .padding(2)
-                    .width(128)
+                    .width(144)
                     .style(style::context_menu)
                     .into()
             }

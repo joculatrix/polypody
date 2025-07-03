@@ -1,3 +1,5 @@
+use iced::widget::{horizontal_space, stack, vertical_space};
+
 use super::{ column, * };
 
 impl App {
@@ -192,7 +194,7 @@ impl App {
             .enumerate()
             .map(|(i, (id, track))| Self::track_view(track, id, i + 1));
 
-        container(
+        let main_elem = container(
             column![
                 Self::library_header_view(dir),
                 scrollable(
@@ -214,6 +216,30 @@ impl App {
             .padding(2)
             .width(iced::Length::FillPortion(10))
             .height(iced::Length::Fill)
-            .into()
+            .into();
+
+        if self.selecting_playlist.is_some() {
+            stack!(
+                main_elem,
+                column![
+                    horizontal_space().height(iced::Length::FillPortion(1)),
+                    row![
+                        vertical_space().width(iced::Length::FillPortion(3)),
+                        container(self.add_to_playlist_menu())
+                            .width(iced::Length::FillPortion(6))
+                            .height(iced::Length::Fill),
+                        vertical_space().width(iced::Length::FillPortion(3)),
+                    ]
+                        .width(iced::Length::Fill)
+                        .height(iced::Length::FillPortion(8)),
+                    horizontal_space().height(iced::Length::FillPortion(1)),
+                ]
+                    .width(iced::Length::Fill)
+                    .height(iced::Length::Fill)
+            )
+                .into()
+        } else {
+            main_elem
+        }
     }
 }

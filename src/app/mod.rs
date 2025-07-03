@@ -3,7 +3,7 @@ use config::Config;
 use playlist::{Playlist, PlaylistMap, PlaylistTrack};
 pub use view::ICON_FONT_BYTES;
 
-use iced::task::Task;
+use iced::{task::Task, widget::combo_box};
 
 use view::start_screen;
 
@@ -14,8 +14,9 @@ mod view;
 #[derive(Debug, Clone)]
 pub enum Message {
     AppendTrack(u64),
-    CreatePlaylist,
     CancelCreatePlaylist,
+    CloseAddToPlaylist,
+    CreatePlaylist,
     ImgPathChanged(String),
     ImgSelected(Option<rfd::FileHandle>),
     None,
@@ -27,6 +28,7 @@ pub enum Message {
     PlayFolder,
     PlayList,
     PlaylistPathChanged(String),
+    PlaylistSelected(u64),
     PlaylistTitleChanged(String),
     PlayTrack(u64),
     PlayheadMoved(f32),
@@ -34,6 +36,7 @@ pub enum Message {
     QueueRemove(usize),
     QueueSwap(usize, usize),
     ScanDone,
+    SelectPlaylist(u64),
     Shuffle,
     ShuffleFolder,
     ShuffleList,
@@ -101,6 +104,8 @@ pub struct App {
     volume: f32,
     start_screen: Option<start_screen::StartScreen>,
 
+    selecting_playlist: Option<u64>,
+
     new_playlist_menu: bool,
     new_playlist_title: String,
     new_playlist_path: String,
@@ -153,6 +158,9 @@ impl App {
         let mut playlists = PlaylistMap::new();
         playlists.scan_playlists();
 
+        let add_to_playlist_state = combo_box::State
+            ::new(playlists.playlists().map(|(id, _)| *id).collect());
+
         let sink = rodio::Sink::try_new(&stream_handle).unwrap();
         let volume = config.misc.default_volume.min(1.0).max(0.0);
         sink.set_volume(volume);
@@ -175,6 +183,7 @@ impl App {
             mute: false,
             volume,
             start_screen,
+            selecting_playlist: None,
             new_playlist_menu: false,
             new_playlist_title: String::new(),
             new_playlist_path: String::new(),
@@ -230,6 +239,10 @@ impl App {
             }
             Message::CancelCreatePlaylist => {
                 self.new_playlist_menu = false;
+                Task::none()
+            }
+            Message::CloseAddToPlaylist => {
+                self.selecting_playlist = None;
                 Task::none()
             }
             Message::CreatePlaylist => {
@@ -345,6 +358,18 @@ impl App {
                 self.new_playlist_path = s;
                 Task::none()
             }
+            Message::PlaylistSelected(pl_id) => unsafe {
+                let track_id = self.selecting_playlist.unwrap_unchecked();
+                let pl = self.playlists.get_playlist_mut(pl_id).unwrap_unchecked();
+                pl.tracks.push(PlaylistTrack::Track(
+                    track_id,
+                    self.library.get_track(track_id).unwrap_unchecked()
+                        .path.clone(),
+                ));
+                self.selecting_playlist = None;
+                pl.write_to_file();
+                Task::none()
+            }
             Message::PlaylistTitleChanged(s) => {
                 self.new_playlist_title = s;
                 Task::none()
@@ -393,6 +418,10 @@ impl App {
                     .inspect_err(|e| eprintln!("Problem caching library data: {e}"));
                 self.config.library.path = start.path.into();
                 self.write_config()
+            }
+            Message::SelectPlaylist(track_id) => {
+                self.selecting_playlist = Some(track_id);
+                Task::none()
             }
             Message::Shuffle => {
                 use rand::{ rng, seq::SliceRandom };
@@ -536,10 +565,14 @@ impl App {
             Message::ViewLibrary(id) => {
                 self.library.set_current(id);
                 self.viewing = Viewing::Library;
+                self.new_playlist_menu = false;
+                self.selecting_playlist = None;
                 Task::none()
             }
             Message::ViewPlaylist(val) => {
                 self.viewing = Viewing::Playlist(val);
+                self.new_playlist_menu = false;
+                self.selecting_playlist = None;
                 Task::none()
             }
             Message::VolumeChanged(val) => {

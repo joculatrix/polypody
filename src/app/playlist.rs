@@ -1,5 +1,6 @@
-use std::{ collections::{hash_map, HashMap}, error::Error, fs::File, io::{Read, Write}, path::PathBuf };
+use std::{ collections::{hash_map, HashMap}, error::Error, fmt::write, fs::File, io::{Read, Write}, path::PathBuf };
 
+use iced::widget::combo_box;
 use serde::{ Deserialize, Serialize };
 
 pub struct PlaylistMap {
@@ -19,6 +20,10 @@ impl PlaylistMap {
 
     pub fn get_playlist(&self, id: u64) -> Option<&Playlist> {
         self.map.get(&id)
+    }
+
+    pub fn get_playlist_mut(&mut self, id: u64) -> Option<&mut Playlist> {
+        self.map.get_mut(&id)
     }
 
     pub fn playlists(&self) -> hash_map::Iter<'_, u64, Playlist> {
@@ -134,5 +139,11 @@ impl Playlist {
         let mut f = File::create(self.file_path()?)?;
         let toml = self.serialize()?;
         Ok(f.write_all(toml.as_bytes())?)
+    }
+}
+
+impl std::fmt::Display for Playlist {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.title)
     }
 }
