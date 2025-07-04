@@ -198,6 +198,7 @@ impl Source for AudioStream {
     fn try_seek(&mut self, pos: Duration)
         -> Result<(), rodio::source::SeekError>
     {
+        self.ring_buf_reader.clear();
         self.tcx.blocking_send(StreamMessage::Seek(pos));
         Ok(())
     }
