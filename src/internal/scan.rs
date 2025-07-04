@@ -380,9 +380,11 @@ mod test {
 
     #[test]
     fn vorbis_duration_is_correct() {
-        let track = scan_vorbis(&PathBuf::from("test/example.ogg"));
+        let track = scan_vorbis(
+            &PathBuf::from("test/Minute_Waltz,_by_Chopin_-_Performed_by_Sergej_Rachmaninoff.ogg")
+        );
         assert!(track.metadata.duration.is_some());
         let length = track.metadata.duration.unwrap().as_secs();
-        assert_eq!(length, 75);
+        assert_eq!(length, 121);
     }
 }
