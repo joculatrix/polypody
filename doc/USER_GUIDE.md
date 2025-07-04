@@ -28,7 +28,7 @@ details of the application's behavior, in as much detail as possible for user re
 Visit [this page](https://github.com/joculatrix/polypody/releases) for releases. Select the option that matches
 your platform.
 
-Polypody ships as a single executable file -- there's no need to run an installer. The only remaining part of
+Polypody ships as a single, zipped executable file -- there's no need to run an installer. The only remaining part of
 this process is that I recommend putting the executable in its own directory, as it will search that directory
 for configuration files, playlist information, and other data that it generates during use.
 
