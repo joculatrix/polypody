@@ -296,7 +296,10 @@ impl<S: ConvertibleSample> SymphoniaDecoder<S> {
         );
     }
 
-    /// Returns `true` if the decoder received and handled a request to seek.
+    /// Returns `WaitErr::SeekRequested` if the decoder received and handled a
+    /// request to seek, `WaitErr::ChannelClosed` if the thread should abort, or
+    /// `Ok(())` if the thread should go ahead and write a decoded packet to the
+    /// buffer.
     async fn wait_for_vacancy(&mut self, required_size: usize)
         -> Result<(), WaitErr>
     {
