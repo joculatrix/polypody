@@ -47,7 +47,9 @@ formats.
 * [ ] AU
 * [x] FLAC
 * [x] MP3
-* [x] Vorbis (.ogg)
+* [ ] OGG
+  * [x] Vorbis
+  * [ ] non-Vorbis
 * [x] WAV
   * [x] Basic support
   * [ ] RIFF INFO metadata

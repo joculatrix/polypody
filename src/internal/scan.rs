@@ -26,7 +26,7 @@ fn scan_file(path: &PathBuf) -> Option<ScanResult> {
     match extension {
         "flac" => Some(ScanResult::Track(scan_flac(path))),
         "mp3" => Some(ScanResult::Track(scan_mp3(path))),
-        "ogg" => Some(ScanResult::Track(scan_vorbis(path))),
+        "ogg" => scan_vorbis(path).map(|v| ScanResult::Track(v)),
         "wav" | "wave" => Some(ScanResult::Track(scan_wav(path))),
         "jpg" | "jpeg" | "png" => Some(ScanResult::Image(path.to_owned())),
         _ => None,
@@ -78,13 +78,12 @@ fn scan_mp3(path: &PathBuf) -> Track {
     Track { path: path.to_owned(), audio_type: AudioType::Mp3, metadata }
 }
 
-fn scan_vorbis(path: &PathBuf) -> Track {
+fn scan_vorbis(path: &PathBuf) -> Option<Track> {
     use lewton::inside_ogg::OggStreamReader;
 
     let sample_len = get_vorbis_duration(path);
 
-    let stream = OggStreamReader::new(File::open(path).unwrap())
-        .unwrap();
+    let stream = OggStreamReader::new(File::open(path).unwrap()).ok()?;
 
     let duration = sample_len
         .map(|samples|
@@ -121,7 +120,7 @@ fn scan_vorbis(path: &PathBuf) -> Track {
 
     let metadata = Metadata { title, artists, album, discnum, num, duration };
 
-    Track { path: path.to_owned(), audio_type: AudioType::Vorbis, metadata }
+    Some(Track { path: path.to_owned(), audio_type: AudioType::Vorbis, metadata })
 }
 
 /// Scans an ogg/vorbis file for its full length, given in samples.
@@ -382,7 +381,8 @@ mod test {
     fn vorbis_duration_is_correct() {
         let track = scan_vorbis(
             &PathBuf::from("test/Minute_Waltz,_by_Chopin_-_Performed_by_Sergej_Rachmaninoff.ogg")
-        );
+        )
+            .unwrap();
         assert!(track.metadata.duration.is_some());
         let length = track.metadata.duration.unwrap().as_secs();
         assert_eq!(length, 121);
