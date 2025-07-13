@@ -304,8 +304,9 @@ fn scan_dir(lib: &mut Library, path_buf: PathBuf) -> Option<u64> {
             (
                 track.metadata.discnum,
                 track.metadata.num,
-                track.metadata.title.clone(),
-                track.path.clone()
+                // compare titles/filenames case-insensitively:
+                track.metadata.title.as_ref().map(|s| s.to_lowercase()),
+                track.path.as_os_str().to_ascii_lowercase(),
             ));
         dir.tracks = tracks_temp.into_iter()
             .map(|track| lib.add_track(track))
