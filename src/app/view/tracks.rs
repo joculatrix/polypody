@@ -156,7 +156,7 @@ impl App {
         row![
             control_button!(
                 icon: Icon::Play,
-                msg: Message::PlayTrack(id),
+                msg: Message::PlayTrack(num),
                 style: style::plain_icon_button_with_colors(
                     iced::Color::parse("#242226").map(|c| c.into()),
                     None
@@ -193,7 +193,7 @@ impl App {
                 container(
                     column(vec![
                         button("Play")
-                            .on_press(Message::PlayTrack(id))
+                            .on_press(Message::PlayTrack(num))
                             .width(iced::Length::Fill)
                             .style(style::context_menu_button)
                             .into(),
