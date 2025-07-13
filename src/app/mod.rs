@@ -422,12 +422,21 @@ impl App {
                             .for_each(|track| {
                                 self.queue.push(*track)
                             });
+                        if self.repeat == RepeatStatus::All {
+                            self.library.current_directory()
+                                .tracks[..index]
+                                .iter()
+                                .for_each(|track| {
+                                    self.queue.push(*track)
+                                });
+                        }
                     }
                     Viewing::Playlist(pl) => unsafe {
                         let id = pl.unwrap_unchecked();
-                        self.playlists.get_playlist(id)
-                            .unwrap_unchecked()
-                            .tracks[index..]
+                        let pl = self.playlists
+                            .get_playlist(id)
+                            .unwrap_unchecked();
+                        pl.tracks[index..]
                             .iter()
                             .map(|pt| match pt {
                                 PlaylistTrack::Unresolved(_) => None,
@@ -437,6 +446,18 @@ impl App {
                             .for_each(|track| {
                                 self.queue.push(track)
                             });
+                        if self.repeat == RepeatStatus::All {
+                            pl.tracks[..index]
+                                .iter()
+                                .map(|pt| match pt {
+                                    PlaylistTrack::Unresolved(_) => None,
+                                    PlaylistTrack::Track(id, _) => Some(*id)
+                                })
+                                .flatten()
+                                .for_each(|track| {
+                                    self.queue.push(track)
+                                });
+                        }
                     }
                 };
                 self.play_next();
