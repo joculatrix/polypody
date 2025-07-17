@@ -300,13 +300,7 @@ fn scan_dir(lib: &mut Library, path_buf: PathBuf) -> Option<u64> {
             .iter()
             .map(|t| unsafe { lib.get_track(*t).unwrap_unchecked() })
             .for_each(|t| tracks_temp.push(t.clone()));
-        tracks_temp.sort_unstable_by_key(|track|
-            (
-                track.metadata.discnum,
-                track.metadata.num,
-                track.metadata.title.clone(),
-                track.path.clone()
-            ));
+        sort_tracks(&mut tracks_temp, false);
         dir.tracks = tracks_temp.into_iter()
             .map(|track| lib.add_track(track))
             .collect();
@@ -321,6 +315,26 @@ fn scan_dir(lib: &mut Library, path_buf: PathBuf) -> Option<u64> {
     } else {
         Some(lib.add_directory(dir.to_owned()))
     } 
+}
+
+fn sort_tracks(tracks: &mut Vec<Track>, stable: bool) {
+    let sort = |track: &Track| {
+        let path = track.path.to_str().unwrap().to_owned();
+        (
+            track.metadata.discnum,
+            track.metadata.num,
+            // compare titles/filenames case-insensitively:
+            track.metadata.title
+                .as_ref()
+                .unwrap_or(&path)
+                .to_lowercase(),
+        )
+    };
+    if stable {
+        tracks.sort_by_key(sort);
+    } else {
+        tracks.sort_unstable_by_key(sort);
+    }
 }
 
 fn sort_images(imgs: Vec<PathBuf>, dir_path: &PathBuf) -> Option<PathBuf> {
@@ -376,6 +390,39 @@ fn sort_images(imgs: Vec<PathBuf>, dir_path: &PathBuf) -> Option<PathBuf> {
 #[cfg(test)]
 mod test {
     use super::*;
+
+    #[test]
+    #[allow(non_snake_case)]
+    fn alphabetical_sort_is_correct() {
+        fn track(path: PathBuf) -> Track {
+            Track {
+                path,
+                audio_type: AudioType::Mp3,
+                metadata: Metadata::default(),
+            }
+        }
+
+        fn track_with_title(s: &'static str) -> Track {
+            Track {
+                path: PathBuf::new(),
+                audio_type: AudioType::Mp3,
+                metadata: Metadata {
+                    title: Some(String::from(s)),
+                    ..Metadata::default()
+                }
+            }
+        }
+
+        let track_A = track(PathBuf::from("A"));
+        let track_B = track(PathBuf::from("B"));
+        let track_a = track_with_title("a");
+
+        let mut tracks = vec![track_A, track_B, track_a];
+        sort_tracks(&mut tracks, true);
+        assert_eq!(tracks[0].path, PathBuf::from("A"));
+        assert_eq!(tracks[1].metadata.title, Some(String::from("a")));
+        assert_eq!(tracks[2].path, PathBuf::from("B"));
+    }
 
     #[test]
     fn vorbis_duration_is_correct() {
