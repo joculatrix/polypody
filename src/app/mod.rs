@@ -33,7 +33,7 @@ pub enum Message {
     PlaylistSelected(u64),
     PlaylistSwap(usize, usize),
     PlaylistTitleChanged(String),
-    PlayTrack(u64),
+    PlayTrack(usize),
     PlayheadMoved(f32),
     PlayheadReleased,
     QueueRemove(usize),
@@ -412,9 +412,54 @@ impl App {
                 self.new_playlist_title = s;
                 Task::none()
             }
-            Message::PlayTrack(id) => {
+            Message::PlayTrack(index) => {
                 self.queue.clear();
-                self.queue.push(id);
+                match self.viewing {
+                    Viewing::Library => {
+                        self.library.current_directory()
+                            .tracks[index..]
+                            .iter()
+                            .for_each(|track| {
+                                self.queue.push(*track)
+                            });
+                        if self.repeat == RepeatStatus::All {
+                            self.library.current_directory()
+                                .tracks[..index]
+                                .iter()
+                                .for_each(|track| {
+                                    self.queue.push(*track)
+                                });
+                        }
+                    }
+                    Viewing::Playlist(pl) => unsafe {
+                        let id = pl.unwrap_unchecked();
+                        let pl = self.playlists
+                            .get_playlist(id)
+                            .unwrap_unchecked();
+                        pl.tracks[index..]
+                            .iter()
+                            .map(|pt| match pt {
+                                PlaylistTrack::Unresolved(_) => None,
+                                PlaylistTrack::Track(id, _) => Some(*id)
+                            })
+                            .flatten()
+                            .for_each(|track| {
+                                self.queue.push(track)
+                            });
+                        if self.repeat == RepeatStatus::All {
+                            pl.tracks[..index]
+                                .iter()
+                                .map(|pt| match pt {
+                                    PlaylistTrack::Unresolved(_) => None,
+                                    PlaylistTrack::Track(id, _) => Some(*id)
+                                })
+                                .flatten()
+                                .for_each(|track| {
+                                    self.queue.push(track)
+                                });
+                        }
+                    }
+                };
                 self.play_next();
                 Task::none()
             }
