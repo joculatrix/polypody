@@ -207,6 +207,7 @@ impl App {
                 )
                     .direction(scrollable::Direction::Vertical(
                         scrollable::Scrollbar::default()))
+                    .id(scrollable::Id::new("library"))
                     .spacing(0)
                     .width(iced::Length::Fill)
                     .height(iced::Length::Fill)
