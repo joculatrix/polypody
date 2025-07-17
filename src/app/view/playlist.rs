@@ -186,6 +186,7 @@ impl App {
             scrollable(column(contents))
                 .direction(scrollable::Direction::Vertical(
                     scrollable::Scrollbar::default()))
+                .id(scrollable::Id::new("playlist_list"))
                 .spacing(0)
                 .width(iced::Length::Fill)
                 .height(iced::Length::Fill)
@@ -314,6 +315,7 @@ impl App {
                 )
                     .direction(scrollable::Direction::Vertical(
                         scrollable::Scrollbar::default()))
+                    .id(scrollable::Id::new("playlist"))
                     .spacing(0)
                     .width(iced::Length::Fill)
                     .height(iced::Length::Fill)

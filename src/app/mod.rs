@@ -646,17 +646,34 @@ impl App {
                 Task::none()
             }
             Message::ViewLibrary(id) => {
+                use iced::widget::scrollable;
+
                 self.library.set_current(id);
                 self.viewing = Viewing::Library;
                 self.new_playlist_menu = false;
                 self.selecting_playlist = None;
-                Task::none()
+                scrollable::scroll_to(
+                    scrollable::Id::new("library"),
+                    scrollable::AbsoluteOffset { x: 0.0, y: 0.0 }
+                )
             }
             Message::ViewPlaylist(val) => {
+                use iced::widget::scrollable;
+
                 self.viewing = Viewing::Playlist(val);
                 self.new_playlist_menu = false;
                 self.selecting_playlist = None;
-                Task::none()
+                if let Some(_) = val {
+                    scrollable::scroll_to(
+                        scrollable::Id::new("playlist"),
+                        scrollable::AbsoluteOffset { x: 0.0, y: 0.0 }
+                    )
+                } else {
+                    scrollable::scroll_to(
+                        scrollable::Id::new("playlist_list"),
+                        scrollable::AbsoluteOffset { x: 0.0, y: 0.0 }
+                    )
+                }
             }
             Message::VolumeChanged(val) => {
                 self.volume = val;
