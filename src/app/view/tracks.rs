@@ -82,6 +82,7 @@ impl App {
                         ),
                     }
                         .size(TEXT_SIZE)
+                        .height(iced::Length::Fill)
                         .align_x(iced::Alignment::Start)
                         .align_y(iced::Alignment::Center),
                     if track.metadata.artists.is_empty() {
@@ -90,6 +91,7 @@ impl App {
                         text!("{}", print_artists(&track.metadata.artists))
                     }
                         .size(TEXT_SIZE)
+                        .height(iced::Length::Fill)
                         .align_x(iced::Alignment::Start)
                         .align_y(iced::Alignment::Center),
                 ]
