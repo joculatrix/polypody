@@ -2,6 +2,7 @@
 #![feature(new_range_api)]
 #![feature(seek_stream_len)]
 #![feature(slice_as_array)]
+#![feature(slice_swap_unchecked)]
 
 use app::App;
 use iced::advanced::graphics::image::image_rs::ImageFormat;
