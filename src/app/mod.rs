@@ -7,7 +7,7 @@ pub use view::ICON_FONT_BYTES;
 
 use iced::{task::Task, widget::combo_box};
 
-use view::{sidebar, start_screen};
+use view::{queue, sidebar, start_screen};
 
 mod config;
 mod playlist;
@@ -15,7 +15,6 @@ mod view;
 
 #[derive(Debug, Clone)]
 pub enum Message {
-    AppendTrack(u64),
     CancelCreatePlaylist,
     CloseAddToPlaylist,
     CreatePlaylist,
@@ -26,28 +25,19 @@ pub enum Message {
     OpenImgDialog,
     OpenNewPlaylist,
     PinAdd(PinKind, PathBuf),
-    PlayFolder,
-    PlayList,
     PlaylistPathChanged(String),
     PlaylistRemove(usize),
     PlaylistSelected(u64),
     PlaylistSwap(usize, usize),
     PlaylistTitleChanged(String),
-    PlayTrack(usize),
+    PlayNext,
     PlayheadMoved(f32),
     PlayheadReleased,
-    QueueRemove(usize),
-    QueueSwap(usize, usize),
+    Queue(queue::QueueMessage),
     ScanDone,
     SelectPlaylist(u64),
-    Shuffle,
-    ShuffleFolder,
-    ShuffleList,
     SidebarMessage(sidebar::SidebarMessage),
-    SkipBack,
-    SkipForward,
     StartScreen(start_screen::Message),
-    Stop,
     ToggleMute,
     TogglePlay,
     ToggleRepeat,
@@ -213,30 +203,6 @@ impl App {
         }
     }
 
-    fn play_next(&mut self) {
-        if self.queue.len() == 0 {
-            return;
-        }
-        let track = self.queue.remove(0);
-        let track = self.library.get_track(track).unwrap();
-        self.playing = Some(track.clone());
-        self.playhead_position = 0.0;
-        self.track_duration = track.metadata
-            .duration
-            .as_ref()
-            .map(|total| (Duration::from_secs(0), *total));
-        self.sink.stop();
-        self.sink.append(
-            internal::audio::AudioStream::new(
-                &track.path,
-                self.codec_registry,
-                self.probe,
-                track.metadata.duration.unwrap(),
-            )
-        );
-        self.sink.play();
-        self.play_status = PlayStatus::Play;
-    }
 
     fn stop(&mut self) {
         self.sink.stop();
@@ -255,10 +221,6 @@ impl App {
 
     pub fn update(&mut self, message: Message) -> Task<Message> {
         match message {
-            Message::AppendTrack(id) => {
-                self.queue.push(id);
-                Task::none()
-            }
             Message::CancelCreatePlaylist => {
                 self.new_playlist_menu = false;
                 Task::none()
@@ -310,6 +272,7 @@ impl App {
                 }
                 Task::none()
             }
+            Message::None => Task::none(),
             Message::OpenImgDialog => {
                 Task::perform(
                     rfd::AsyncFileDialog::new()
@@ -352,33 +315,6 @@ impl App {
                     }
                 }
             }
-            Message::PlayFolder => {
-                let tracks = &self.library.current_directory().tracks;
-                self.queue.resize(tracks.len(), 0);
-                self.queue.copy_from_slice(tracks);
-                self.stop();
-                self.play_next();
-                Task::none()
-            }
-            Message::PlayList => {
-                let Viewing::Playlist(Some(list)) = self.viewing else {
-                    return Task::none();
-                };
-                let tracks = self.playlists.get_playlist(list).unwrap()
-                    .tracks
-                    .iter()
-                    .map(|track| match track {
-                        PlaylistTrack::Track(id, _) => Some(*id),
-                        _ => None,
-                    })
-                    .flatten()
-                    .collect::<Vec<_>>();
-                self.queue.resize(tracks.len(), 0);
-                self.queue.copy_from_slice(&tracks);
-                self.stop();
-                self.play_next();
-                Task::none()
-            }
             Message::PlaylistPathChanged(s) => {
                 self.new_playlist_path = s;
                 Task::none()
@@ -419,57 +355,6 @@ impl App {
                 self.new_playlist_title = s;
                 Task::none()
             }
-            Message::PlayTrack(index) => {
-                self.queue.clear();
-                match self.viewing {
-                    Viewing::Library => {
-                        self.library.current_directory()
-                            .tracks[index..]
-                            .iter()
-                            .for_each(|track| {
-                                self.queue.push(*track)
-                            });
-                        if self.repeat == RepeatStatus::All {
-                            self.library.current_directory()
-                                .tracks[..index]
-                                .iter()
-                                .for_each(|track| {
-                                    self.queue.push(*track)
-                                });
-                        }
-                    }
-                    Viewing::Playlist(pl) => unsafe {
-                        let id = pl.unwrap_unchecked();
-                        let pl = self.playlists
-                            .get_playlist(id)
-                            .unwrap_unchecked();
-                        pl.tracks[index..]
-                            .iter()
-                            .map(|pt| match pt {
-                                PlaylistTrack::Unresolved(_) => None,
-                                PlaylistTrack::Track(id, _) => Some(*id)
-                            })
-                            .flatten()
-                            .for_each(|track| {
-                                self.queue.push(track)
-                            });
-                        if self.repeat == RepeatStatus::All {
-                            pl.tracks[..index]
-                                .iter()
-                                .map(|pt| match pt {
-                                    PlaylistTrack::Unresolved(_) => None,
-                                    PlaylistTrack::Track(id, _) => Some(*id)
-                                })
-                                .flatten()
-                                .for_each(|track| {
-                                    self.queue.push(track)
-                                });
-                        }
-                    }
-                };
-                self.play_next();
-                Task::none()
-            }
             Message::PlayheadMoved(val) => {
                 self.playhead_position = val;
                 self.seeking = true;
@@ -491,16 +376,32 @@ impl App {
                 self.seeking = false;
                 Task::none()
             }
-            Message::QueueRemove(index) => {
-                self.queue.remove(index);
-                Task::none()
-            }
-            Message::QueueSwap(a, b) => {
-                if b < self.queue.len() {
-                    self.queue.swap(a, b);
+            Message::PlayNext => {
+                if self.queue.len() == 0 {
+                    return Task::none();
                 }
+                let track = self.queue.remove(0);
+                let track = self.library.get_track(track).unwrap();
+                self.playing = Some(track.clone());
+                self.playhead_position = 0.0;
+                self.track_duration = track.metadata
+                    .duration
+                    .as_ref()
+                    .map(|total| (Duration::from_secs(0), *total));
+                self.sink.stop();
+                self.sink.append(
+                    internal::audio::AudioStream::new(
+                        &track.path,
+                        self.codec_registry,
+                        self.probe,
+                        track.metadata.duration.unwrap(),
+                    )
+                );
+                self.sink.play();
+                self.play_status = PlayStatus::Play;
                 Task::none()
             }
+            Message::Queue(msg) => self.update_queue(msg),
             Message::ScanDone => unsafe {
                 let start = self.start_screen.take().unwrap_unchecked();
                 self.library = start.lib.unwrap_unchecked();
@@ -513,96 +414,9 @@ impl App {
                 self.selecting_playlist = Some(track_id);
                 Task::none()
             }
-            Message::Shuffle => {
-                use rand::{ rng, seq::SliceRandom };
-
-                self.queue.shuffle(&mut rng());
-                Task::none()
-            }
-            Message::ShuffleFolder => {
-                use rand::{ rng, seq::SliceRandom };
-
-                let tracks = &self.library.current_directory().tracks;
-                self.queue.resize(tracks.len(), 0);
-                let mut shuffle = (0..tracks.len())
-                    .collect::<Vec<usize>>();
-                shuffle.shuffle(&mut rng());
-                for (i, j) in shuffle.into_iter().enumerate() {
-                    self.queue[i] = tracks[j];
-                }
-                self.stop();
-                self.play_next();
-                Task::none()
-            }
-            Message::ShuffleList => {
-                use rand::{ rng, seq::SliceRandom };
-
-                let Viewing::Playlist(Some(list)) = self.viewing else {
-                    return Task::none();
-                };
-                let tracks = self.playlists.get_playlist(list).unwrap()
-                    .tracks
-                    .iter()
-                    .map(|track| match track {
-                        PlaylistTrack::Track(id, _) => Some(*id),
-                        _ => None,
-                    })
-                    .flatten()
-                    .collect::<Vec<_>>();
-                self.queue.resize(tracks.len(), 0);
-                let mut shuffle = (0..tracks.len())
-                    .collect::<Vec<usize>>();
-                shuffle.shuffle(&mut rng());
-                for (i, j) in shuffle.into_iter().enumerate() {
-                    self.queue[i] = tracks[j];
-                }
-                self.stop();
-                self.play_next();
-                Task::none()
-            }
             Message::SidebarMessage(msg) => {
                 self.sidebar.update(msg, &mut self.config);
                 self.write_config()
-            }
-            Message::SkipBack => {
-                let Some(playing) = &self.playing else {
-                    return Task::none();
-                };
-                match self.repeat {
-                    RepeatStatus::None | RepeatStatus::One => {
-                        self.sink.try_seek(Duration::from_secs(0));
-                    }
-                    RepeatStatus::All => {
-                        let Some((current, _)) = &self.track_duration else {
-                            return Task::none();
-                        };
-                        if current.as_secs() <= 1 && !self.queue.is_empty() {
-                            self.queue.insert(0, track_hash(playing));
-                            let last = unsafe {
-                                self.queue.last().unwrap_unchecked()
-                            };
-                            self.queue.insert(0, *last);
-                            self.play_next();
-                        } else {
-                            self.sink.try_seek(Duration::from_secs(0));
-                        }
-                    }
-                }
-                Task::none()
-            }
-            Message::SkipForward => {
-                let Some(playing) = &self.playing else {
-                    return Task::none();
-                };
-                match self.repeat {
-                    RepeatStatus::All => {
-                        self.queue.push(track_hash(playing));
-                    }
-                    _ => (),
-                }
-                self.stop();
-                self.play_next();
-                Task::none()
             }
             Message::StartScreen(msg) => {
                 if let Some(start) = &mut self.start_screen {
@@ -615,12 +429,6 @@ impl App {
                 } else {
                     Task::none()
                 }
-            }
-            Message::Stop => {
-                self.play_status = PlayStatus::Stopped;
-                self.queue.clear();
-                self.stop();
-                Task::none()
             }
             Message::ToggleMute => {
                 self.mute = !self.mute;
@@ -653,8 +461,7 @@ impl App {
                 Task::none()
             },
             Message::UpdateProgress => {
-                self.update_progress();
-                Task::none()
+                self.update_progress()
             }
             Message::ViewLibrary(id) => {
                 use iced::widget::scrollable;
@@ -694,11 +501,10 @@ impl App {
                 self.sink.set_volume(val);
                 Task::none()
             }
-            _ => Task::none(),
         }
     }
 
-    fn update_progress(&mut self) {
+    fn update_progress(&mut self) -> Task<Message> {
         if self.sink.empty() {
             if let Some(playing) = &self.playing {
                 let last = track_hash(playing);
@@ -710,13 +516,15 @@ impl App {
             }
             self.playing = None;
             if self.queue.len() != 0 {
-                self.play_next();
+                Task::done(Message::PlayNext)
             } else {
                 self.playhead_position = 0.0;
+                self.stop();
+                Task::none()
             }
         } else {
             let Some(playing) = &self.playing else {
-                return; // prevent race conditions
+                return Task::none(); // prevent race conditions
             };
             let sink_pos = self.sink.get_pos();
             let duration = playing.metadata.duration.unwrap();
@@ -725,6 +533,7 @@ impl App {
                 self.playhead_position =
                     sink_pos.as_secs_f32() / duration.as_secs_f32();
             }
+            Task::none()
         }
     }
 
