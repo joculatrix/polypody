@@ -1,7 +1,7 @@
 use super::{ *, column };
 
 impl App {
-    fn queue_item_view(num: usize, track: &Track) -> Element {
+    fn queue_item(num: usize, track: &Track) -> Element {
         iced::widget::hover(
             container(
                 column![
@@ -9,8 +9,11 @@ impl App {
                         "{}",
                         track.metadata.title
                             .as_deref()
-                            .unwrap_or(track.path.file_name().unwrap()
-                                .to_str().unwrap())
+                            .unwrap_or(
+                                track.path
+                                    .file_name().unwrap()
+                                    .to_str().unwrap()
+                            )
                     )
                         .size(TEXT_SIZE),
                     text!("{}", print_artists(&track.metadata.artists))
@@ -60,17 +63,17 @@ impl App {
                 .padding(iced::Padding { right: 5.0, ..iced::Padding::default() })
                 .width(iced::Length::Fill)
                 .height(iced::Length::Fill)
-        ) 
+        )
     }
 
-    pub(super) fn queue_view(&self) -> Element {
+    pub(super) fn queue(&self) -> Element {
         let mut contents = vec![];
 
         let queue = self.queue.iter()
             .enumerate()
             .map(|(i, track)| {
                 let track = self.library.get_track(*track).unwrap();
-                Self::queue_item_view(i, track)
+                Self::queue_item(i, track)
             })
             .collect::<Vec<_>>();
         contents.push(
