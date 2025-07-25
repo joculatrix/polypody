@@ -195,17 +195,17 @@ impl App {
                         button("Play")
                             .on_press(Message::PlayTrack(num))
                             .width(iced::Length::Fill)
-                            .style(style::context_menu_button)
+                            .style(style::list_button)
                             .into(),
                         button("Add to queue")
                             .on_press(Message::AppendTrack(id))
                             .width(iced::Length::Fill)
-                            .style(style::context_menu_button)
+                            .style(style::list_button)
                             .into(),
                         button("Add to playlist...")
                             .on_press(Message::SelectPlaylist(id))
                             .width(iced::Length::Fill)
-                            .style(style::context_menu_button)
+                            .style(style::list_button)
                             .into(),
                     ])
                 )

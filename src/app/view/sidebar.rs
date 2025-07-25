@@ -103,18 +103,7 @@ impl Sidebar {
                 column(contents)
             )
         )
-            .style(|theme: &iced::Theme| {
-                let palette = theme.extended_palette();
-
-                container::Style {
-                    border: iced::Border {
-                        color: palette.background.base.text.scale_alpha(0.2),
-                        width: 1.0,
-                        radius: (2.0).into(),
-                    },
-                    ..container::Style::default()
-                }
-            })
+            .style(style::bordered_container)
             .padding(1)
             .width(iced::Length::FillPortion(3))
             .height(iced::Length::Fill)
@@ -165,18 +154,7 @@ impl Sidebar {
                         .align_y(iced::Alignment::Center)
                         .height(iced::Length::Fill)
                 )
-                    .style(|theme: &iced::Theme, status: button::Status| {
-                        let palette = theme.extended_palette();
-                        button::Style {
-                            text_color: palette.background.base.text,
-                            background: match status {
-                                button::Status::Hovered | button::Status::Pressed =>
-                                    iced::Color::parse("#242226").map(|c| c.into()),
-                                _ => Some(palette.background.base.color.into()),
-                            },
-                            ..button::Style::default()
-                        }
-                    })
+                    .style(style::list_button)
                     .width(iced::Length::Fill)
                     .height(iced::Length::Fill)
                     .on_press(open_msg)

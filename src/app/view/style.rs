@@ -19,7 +19,7 @@ pub(super) fn context_menu(theme: &iced::Theme) -> container::Style {
     }
 }
 
-pub(super) fn context_menu_button(
+pub(super) fn list_button(
     theme: &iced::Theme,
     status: button::Status,
 ) -> button::Style {
@@ -270,19 +270,25 @@ pub(super) fn outlined_button(
     }
 }
 
-pub(super) fn track_list_container(
-    theme: &iced::Theme,
-) -> container::Style {
+pub(super) fn bordered_container(theme: &iced::Theme) -> container::Style {
     let palette = theme.extended_palette();
 
     container::Style {
-        background: iced::Color::parse("#242226").map(|c| c.into()),
         border: iced::Border {
             color: palette.background.base.text.scale_alpha(0.2),
             width: 1.0,
             radius: (2.0).into(),
         },
         ..container::Style::default()
+    }
+}
+
+pub(super) fn track_list_container(
+    theme: &iced::Theme,
+) -> container::Style {
+    container::Style {
+        background: iced::Color::parse("#242226").map(|c| c.into()),
+        ..bordered_container(theme)
     }
 }
 
