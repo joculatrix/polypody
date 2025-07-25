@@ -61,7 +61,9 @@ impl Sidebar {
     }
 
     pub fn view(&self) -> Element {
-        let mut contents = vec![];
+        let mut contents = Vec::with_capacity(
+            self.library_pins.len() + self.playlist_pins.len() + 2
+        );
         contents.push(
             Self::section_btn(
                 Icon::DiscAlbum,
