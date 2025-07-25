@@ -1,4 +1,4 @@
-use crate::internal::library::{directory_hash, path_hash};
+use crate::internal::library::path_hash;
 
 use super::*;
 use config::Config;
