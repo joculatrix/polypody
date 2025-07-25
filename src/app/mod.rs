@@ -1,3 +1,5 @@
+use crate::internal::library::path_hash;
+
 use super::*;
 use config::Config;
 use playlist::{Playlist, PlaylistMap, PlaylistTrack};
@@ -5,7 +7,7 @@ pub use view::ICON_FONT_BYTES;
 
 use iced::{task::Task, widget::combo_box};
 
-use view::start_screen;
+use view::{sidebar, start_screen};
 
 mod config;
 mod playlist;
@@ -24,8 +26,6 @@ pub enum Message {
     OpenImgDialog,
     OpenNewPlaylist,
     PinAdd(PinKind, PathBuf),
-    PinRemove(PinKind, usize),
-    PinSwap(PinKind, usize, usize),
     PlayFolder,
     PlayList,
     PlaylistPathChanged(String),
@@ -43,6 +43,7 @@ pub enum Message {
     Shuffle,
     ShuffleFolder,
     ShuffleList,
+    SidebarMessage(sidebar::SidebarMessage),
     SkipBack,
     SkipForward,
     StartScreen(start_screen::Message),
@@ -52,6 +53,7 @@ pub enum Message {
     ToggleRepeat,
     UpdateProgress,
     ViewLibrary(u64),
+    ViewLibraryRoot,
     ViewPlaylist(Option<u64>),
     VolumeChanged(f32),
 }
@@ -106,6 +108,7 @@ pub struct App {
     mute: bool,
     volume: f32,
     start_screen: Option<start_screen::StartScreen>,
+    sidebar: sidebar::Sidebar,
 
     selecting_playlist: Option<u64>,
 
@@ -170,6 +173,19 @@ impl App {
         let volume = config.misc.default_volume.min(1.0).max(0.0);
         sink.set_volume(volume);
 
+        let sidebar = sidebar::Sidebar::new(
+            config.library.pins.iter().map(|path| (
+                path_hash(&path),
+                path.file_stem().unwrap().to_str().unwrap().to_owned(),
+            ))
+                .collect(),
+            config.playlists.pins.iter().map(|path| {
+                let id = path_hash(&path);
+                (id, playlists.get_playlist(id).unwrap().title.to_owned())
+            })
+                .collect()
+        );
+
         Self {
             codec_registry: symphonia::default::get_codecs(),
             probe: symphonia::default::get_probe(),
@@ -187,6 +203,7 @@ impl App {
             track_duration: None,
             mute: false,
             volume,
+            sidebar,
             start_screen,
             selecting_playlist: None,
             new_playlist_menu: false,
@@ -311,39 +328,29 @@ impl App {
             Message::PinAdd(kind, path) => {
                 match kind {
                     PinKind::Library => {
-                        self.config.library.pins.push(path);
+                        self.config.library.pins.push(path.clone());
+                        Task::done(
+                            sidebar::SidebarMessage::LibraryAppend(
+                                path_hash(&path),
+                                path.file_stem().unwrap()
+                                    .to_str().unwrap().to_owned()
+                            )
+                                .into()
+                        )
                     }
                     PinKind::Playlist => {
-                        self.config.playlists.pins.push(path);
+                        self.config.playlists.pins.push(path.clone());
+                        let id = path_hash(&path);
+                        Task::done(
+                            sidebar::SidebarMessage::PlaylistAppend(
+                                path_hash(&path),
+                                self.playlists.get_playlist(id).unwrap()
+                                    .title.clone(),
+                            )
+                                .into()
+                        )
                     }
                 }
-                self.write_config()
-            }
-            Message::PinRemove(kind, index) => {
-                match kind {
-                    PinKind::Library => {
-                        self.config.library.pins.remove(index);
-                    }
-                    PinKind::Playlist => {
-                        self.config.playlists.pins.remove(index);
-                    }
-                }
-                self.write_config()
-            }
-            Message::PinSwap(kind, a, b) => {
-                match kind {
-                    PinKind::Library => {
-                        if b < self.config.library.pins.len() {
-                            self.config.library.pins.swap(a, b);
-                        }
-                    }
-                    PinKind::Playlist => {
-                        if b < self.config.playlists.pins.len() {
-                            self.config.playlists.pins.swap(a, b);
-                        }
-                    }
-                }
-                self.write_config()
             }
             Message::PlayFolder => {
                 let tracks = &self.library.current_directory().tracks;
@@ -553,6 +560,10 @@ impl App {
                 self.play_next();
                 Task::none()
             }
+            Message::SidebarMessage(msg) => {
+                self.sidebar.update(msg, &mut self.config);
+                self.write_config()
+            }
             Message::SkipBack => {
                 let Some(playing) = &self.playing else {
                     return Task::none();
@@ -656,6 +667,9 @@ impl App {
                     scrollable::Id::new("library"),
                     scrollable::AbsoluteOffset { x: 0.0, y: 0.0 }
                 )
+            }
+            Message::ViewLibraryRoot => {
+                Task::done(Message::ViewLibrary(self.library.root_dir))
             }
             Message::ViewPlaylist(val) => {
                 use iced::widget::scrollable;

@@ -13,7 +13,7 @@ mod controls;
 mod library;
 mod playlist;
 mod queue;
-mod sidebar;
+pub mod sidebar;
 pub mod start_screen;
 mod style;
 mod tracks;
@@ -133,7 +133,7 @@ impl App {
         container(
             column![
                 row![
-                    self.sidebar_view(),
+                    self.sidebar.view(),
                     iced::widget::vertical_space().width(5),
                     match self.viewing {
                         Viewing::Library => self.library_view(),
