@@ -12,7 +12,7 @@ use std::time::Duration;
 mod controls;
 mod library;
 mod playlist;
-mod queue;
+pub mod queue;
 pub mod sidebar;
 pub mod start_screen;
 mod style;
@@ -141,7 +141,7 @@ impl App {
                         Viewing::Playlist(Some(id)) => self.playlist_view(id),
                     },
                     iced::widget::vertical_space().width(5),                    
-                    self.queue_view(),
+                    self.view_queue(),
                 ],
                 self.current_track(),
                 self.progress_bar(),

@@ -251,12 +251,12 @@ impl App {
                     row![
                         control_button!(
                             icon: Icon::Play,
-                            msg: Message::PlayList,
+                            msg: queue::QueueMessage::PlayList.into(),
                             style: style::plain_icon_button,
                         ),
                         control_button!(
                             icon: Icon::Shuffle,
-                            msg: Message::ShuffleList,
+                            msg: queue::QueueMessage::ShuffleList.into(),
                             style: style::plain_icon_button,
                         ),
                         control_button!(

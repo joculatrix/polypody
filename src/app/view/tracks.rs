@@ -158,7 +158,7 @@ impl App {
         row![
             control_button!(
                 icon: Icon::Play,
-                msg: Message::PlayTrack(num),
+                msg: queue::QueueMessage::PlayTrack(num).into(),
                 style: style::plain_icon_button_with_colors(
                     iced::Color::parse("#242226").map(|c| c.into()),
                     None
@@ -167,7 +167,7 @@ impl App {
                 .width(iced::Length::FillPortion(1)),
             control_button!(
                 icon: Icon::Plus,
-                msg: Message::AppendTrack(id),
+                msg: queue::QueueMessage::Append(id).into(),
                 style: style::plain_icon_button_with_colors(
                     iced::Color::parse("#242226").map(|c| c.into()),
                     None
@@ -195,12 +195,12 @@ impl App {
                 container(
                     column(vec![
                         button("Play")
-                            .on_press(Message::PlayTrack(num))
+                            .on_press(queue::QueueMessage::PlayTrack(num).into())
                             .width(iced::Length::Fill)
                             .style(style::list_button)
                             .into(),
                         button("Add to queue")
-                            .on_press(Message::AppendTrack(id))
+                            .on_press(queue::QueueMessage::Append(id).into())
                             .width(iced::Length::Fill)
                             .style(style::list_button)
                             .into(),

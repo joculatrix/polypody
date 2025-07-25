@@ -97,12 +97,12 @@ impl App {
                     row![
                         control_button!(
                             icon: Icon::Play,
-                            msg: Message::PlayFolder,
+                            msg: queue::QueueMessage::PlayFolder.into(),
                             style: style::plain_icon_button,
                         ),
                         control_button!(
                             icon: Icon::Shuffle,
-                            msg: Message::ShuffleFolder,
+                            msg: queue::QueueMessage::ShuffleFolder.into(),
                             style: style::plain_icon_button,
                         ),
                         control_button!(

@@ -83,7 +83,7 @@ impl App {
     fn back_button() -> Element<'static> {
         control_button!(
             icon: Icon::SkipBack,
-            msg: Message::SkipBack,
+            msg: queue::QueueMessage::SkipBack.into(),
             style: style::plain_icon_button,
         )
             .into()
@@ -92,7 +92,7 @@ impl App {
     fn forward_button() -> Element<'static> {
         control_button!(
             icon: Icon::SkipForward,
-            msg: Message::SkipForward,
+            msg: queue::QueueMessage::SkipForward.into(),
             style: style::plain_icon_button,
         )
             .into()
@@ -101,7 +101,7 @@ impl App {
     fn shuffle_button() -> Element<'static> {
         control_button!(
             icon: Icon::Shuffle,
-            msg: Message::Shuffle,
+            msg: queue::QueueMessage::Shuffle.into(),
             style: style::plain_icon_button,
         )
             .into()
@@ -110,7 +110,7 @@ impl App {
     fn stop_button() -> Element<'static> {
         control_button!(
             icon: Icon::Square,
-            msg: Message::Stop,
+            msg: queue::QueueMessage::Stop.into(),
             style: style::plain_icon_button,
         )
             .into()
