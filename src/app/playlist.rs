@@ -1,13 +1,11 @@
 use std::{
     collections::{HashMap, hash_map},
     error::Error,
-    fmt::write,
     fs::File,
     io::{Read, Write},
     path::PathBuf,
 };
 
-use iced::widget::combo_box;
 use serde::{Deserialize, Serialize};
 
 pub struct PlaylistMap {
