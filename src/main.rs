@@ -4,6 +4,9 @@
 #![feature(slice_as_array)]
 #![feature(slice_swap_unchecked)]
 
+#![deny(unused_imports)]
+#![deny(unused_import_braces)]
+
 use std::{path::PathBuf, time::Duration};
 
 use app::App;
