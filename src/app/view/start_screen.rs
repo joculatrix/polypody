@@ -1,12 +1,16 @@
 use std::path::PathBuf;
 
+use iced::{
+    Task,
+    widget::{column, horizontal_space, row, text, text_input, vertical_space},
+};
+
+use super::{Icon, control_button};
 use crate::internal::library::Library;
-use super::{ control_button, Icon };
-use iced::{ widget::{ column, horizontal_space, row, text, text_input, vertical_space }, Task };
 
 pub struct StartScreen {
-    error: bool,
-    pub lib: Option<Library>,
+    error:    bool,
+    pub lib:  Option<Library>,
     pub path: String,
     scanning: bool,
 }
@@ -34,14 +38,10 @@ impl StartScreen {
 
     pub fn update(&mut self, msg: Message) -> Task<Message> {
         match msg {
-            Message::OpenDialog => {
-                Task::perform(
-                    rfd::AsyncFileDialog::new()
-                        .set_directory("/")
-                        .pick_folder(),
-                    Message::Selected,
-                )
-            }
+            Message::OpenDialog => Task::perform(
+                rfd::AsyncFileDialog::new().set_directory("/").pick_folder(),
+                Message::Selected,
+            ),
             Message::PathChanged(s) => {
                 self.path = s;
                 Task::none()
@@ -98,15 +98,19 @@ impl StartScreen {
                     .width(iced::Length::Fill)
                     .center(),
                 horizontal_space().height(8),
-                text!("{}", if self.error {
-                    "A problem occurred reading the given directory. Please retry."
-                } else { 
-                    ""
-                })
-                    .size(super::SMALL_TEXT_SIZE)
-                    .width(iced::Length::Fill)
-                    .color(iced::theme::Theme::Ferra.palette().danger)
-                    .center(),
+                text!(
+                    "{}",
+                    if self.error {
+                        "A problem occurred reading the given directory. \
+                         Please retry."
+                    } else {
+                        ""
+                    }
+                )
+                .size(super::SMALL_TEXT_SIZE)
+                .width(iced::Length::Fill)
+                .color(iced::theme::Theme::Ferra.palette().danger)
+                .center(),
                 horizontal_space().height(8),
                 row![
                     horizontal_space(),
@@ -115,8 +119,7 @@ impl StartScreen {
                         msg: Message::OpenDialog,
                         style: super::style::plain_icon_button,
                     ),
-                    text_input("/", &self.path)
-                        .on_input(Message::PathChanged),
+                    text_input("/", &self.path).on_input(Message::PathChanged),
                     control_button!(
                         icon: Icon::ArrowCornerDL,
                         msg: Message::Scan,
@@ -127,20 +130,27 @@ impl StartScreen {
                 horizontal_space().height(20),
                 row![
                     horizontal_space(),
-                    text!("(If you've already set a library path and are still \
-                        seeing this screen, then a problem may have occurred \
-                        reading either your config file or the directory.)")
-                        .size(super::SMALL_TEXT_SIZE)
-                        .width(iced::Length::Fill)
-                        .color(iced::theme::Theme::Ferra.palette().text.scale_alpha(0.6))
-                        .center(),
+                    text!(
+                        "(If you've already set a library path and are still \
+                         seeing this screen, then a problem may have occurred \
+                         reading either your config file or the directory.)"
+                    )
+                    .size(super::SMALL_TEXT_SIZE)
+                    .width(iced::Length::Fill)
+                    .color(
+                        iced::theme::Theme::Ferra
+                            .palette()
+                            .text
+                            .scale_alpha(0.6)
+                    )
+                    .center(),
                     horizontal_space(),
                 ],
                 vertical_space(),
             ]
-                .width(iced::Length::Fill)
-                .height(iced::Length::Fill)
-                .into()
+            .width(iced::Length::Fill)
+            .height(iced::Length::Fill)
+            .into()
         }
     }
 }

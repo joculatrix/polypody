@@ -1,7 +1,14 @@
-use std::{ collections::{hash_map, HashMap}, error::Error, fmt::write, fs::File, io::{Read, Write}, path::PathBuf };
+use std::{
+    collections::{HashMap, hash_map},
+    error::Error,
+    fmt::write,
+    fs::File,
+    io::{Read, Write},
+    path::PathBuf,
+};
 
 use iced::widget::combo_box;
-use serde::{ Deserialize, Serialize };
+use serde::{Deserialize, Serialize};
 
 pub struct PlaylistMap {
     map: HashMap<u64, Playlist>,
@@ -9,7 +16,9 @@ pub struct PlaylistMap {
 
 impl PlaylistMap {
     pub fn new() -> Self {
-        Self { map: HashMap::new() }
+        Self {
+            map: HashMap::new(),
+        }
     }
 
     pub fn add_playlist(&mut self, pl: Playlist) -> u64 {
@@ -57,7 +66,7 @@ impl PlaylistMap {
                     };
                     let pl = Playlist::from_toml(
                         toml,
-                        path.file_name().unwrap().to_str().unwrap().to_owned()
+                        path.file_name().unwrap().to_str().unwrap().to_owned(),
                     );
                     self.add_playlist(pl);
                 }
@@ -83,8 +92,8 @@ pub enum PlaylistTrack {
 
 #[derive(Deserialize, Serialize)]
 struct TomlPlaylist {
-    title: String,
-    img: Option<String>,
+    title:  String,
+    img:    Option<String>,
     tracks: Vec<String>,
 }
 
@@ -93,9 +102,14 @@ impl Playlist {
         title: String,
         filename: String,
         img: Option<PathBuf>,
-        tracks: Vec<PlaylistTrack>
+        tracks: Vec<PlaylistTrack>,
     ) -> Self {
-        Self { title, filename,img, tracks }
+        Self {
+            title,
+            filename,
+            img,
+            tracks,
+        }
     }
 
     pub fn from_toml(toml: TomlPlaylist, filename: String) -> Self {
@@ -107,13 +121,18 @@ impl Playlist {
             if track.try_exists().is_ok_and(|x| x) {
                 tracks.push(PlaylistTrack::Track(
                     crate::internal::library::path_hash(&track),
-                    track
+                    track,
                 ));
             } else {
                 tracks.push(PlaylistTrack::Unresolved(track));
             }
         }
-        Self { filename, title, img, tracks }
+        Self {
+            filename,
+            title,
+            img,
+            tracks,
+        }
     }
 
     pub fn file_path(&self) -> Result<PathBuf, Box<dyn Error>> {
@@ -126,14 +145,22 @@ impl Playlist {
 
     pub fn serialize(&self) -> Result<String, Box<dyn Error>> {
         let playlist = TomlPlaylist {
-            title: self.title.clone(),
-            img: self.img.clone().map(|path| path.to_str().unwrap().to_owned()),
-            tracks: self.tracks
+            title:  self.title.clone(),
+            img:    self
+                .img
+                .clone()
+                .map(|path| path.to_str().unwrap().to_owned()),
+            tracks: self
+                .tracks
                 .clone()
                 .into_iter()
                 .map(|x| match x {
-                    PlaylistTrack::Track(_, path) => path.to_str().unwrap().to_owned(),
-                    PlaylistTrack::Unresolved(path) => path.to_str().unwrap().to_owned(),
+                    PlaylistTrack::Track(_, path) => {
+                        path.to_str().unwrap().to_owned()
+                    }
+                    PlaylistTrack::Unresolved(path) => {
+                        path.to_str().unwrap().to_owned()
+                    }
                 })
                 .collect(),
         };

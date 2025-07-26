@@ -1,23 +1,24 @@
-use std::fs::File;
-use std::io::{ Read, Seek };
-use std::path::PathBuf;
-use std::time::Duration;
+use std::{
+    fs::File,
+    io::{Read, Seek},
+    path::PathBuf,
+    time::Duration,
+};
 
 pub use library::Library;
-pub use scan::{ scan, partial_scan };
+pub use scan::{partial_scan, scan};
 
 pub mod audio;
 pub mod library;
 pub mod scan;
 
-
 #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
 pub struct Directory {
-    pub parent: u64,
-    pub path: PathBuf,
-    pub img: Option<PathBuf>,
+    pub parent:  u64,
+    pub path:    PathBuf,
+    pub img:     Option<PathBuf>,
     pub subdirs: Vec<u64>,
-    pub tracks: Vec<u64>,
+    pub tracks:  Vec<u64>,
 }
 
 impl Directory {

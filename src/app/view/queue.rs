@@ -1,4 +1,4 @@
-use super::{ *, column };
+use super::{column, *};
 
 #[derive(Clone, Debug)]
 pub enum QueueMessage {
@@ -25,35 +25,32 @@ impl Into<Message> for QueueMessage {
 impl App {
     fn queue_item(num: usize, track: &Track) -> Element {
         iced::widget::hover(
-            container(
-                column![
-                    text!(
-                        "{}",
-                        track.metadata.title
-                            .as_deref()
-                            .unwrap_or(
-                                track.path
-                                    .file_name().unwrap()
-                                    .to_str().unwrap()
-                            )
+            container(column![
+                text!(
+                    "{}",
+                    track.metadata.title.as_deref().unwrap_or(
+                        track.path.file_name().unwrap().to_str().unwrap()
                     )
-                        .size(TEXT_SIZE),
-                    text!("{}", print_artists(&track.metadata.artists))
-                        .size(TEXT_SIZE)
-                        .style(|theme: &iced::Theme| {
-                            text::Style {
-                                color: Some(
-                                    theme.extended_palette()
-                                        .background.base.text
-                                        .scale_alpha(0.5)
-                                )
-                            }
-                        }),
-                ]
-            )
-                .padding(3)
-                .width(iced::Length::Fill)
-                .height(48),
+                )
+                .size(TEXT_SIZE),
+                text!("{}", print_artists(&track.metadata.artists))
+                    .size(TEXT_SIZE)
+                    .style(|theme: &iced::Theme| {
+                        text::Style {
+                            color: Some(
+                                theme
+                                    .extended_palette()
+                                    .background
+                                    .base
+                                    .text
+                                    .scale_alpha(0.5),
+                            ),
+                        }
+                    }),
+            ])
+            .padding(3)
+            .width(iced::Length::Fill)
+            .height(48),
             container(
                 row![
                     column![
@@ -84,20 +81,25 @@ impl App {
                         style: style::plain_icon_button,
                     )
                 ]
-                    .height(iced::Length::Fill)
-                    .align_y(iced::Alignment::Center)
-            )
-                .align_x(iced::Alignment::End)
-                .padding(iced::Padding { right: 5.0, ..iced::Padding::default() })
-                .width(iced::Length::Fill)
                 .height(iced::Length::Fill)
+                .align_y(iced::Alignment::Center),
+            )
+            .align_x(iced::Alignment::End)
+            .padding(iced::Padding {
+                right: 5.0,
+                ..iced::Padding::default()
+            })
+            .width(iced::Length::Fill)
+            .height(iced::Length::Fill),
         )
     }
 
     pub(super) fn view_queue(&self) -> Element {
         let mut contents = vec![];
 
-        let queue = self.queue.iter()
+        let queue = self
+            .queue
+            .iter()
             .enumerate()
             .map(|(i, track)| {
                 let track = self.library.get_track(*track).unwrap();
@@ -105,15 +107,11 @@ impl App {
             })
             .collect::<Vec<_>>();
         contents.push(
-            container(
-                scrollable(
-                    column(queue)
-                )
-            )
+            container(scrollable(column(queue)))
                 .style(style::track_list_container)
                 .width(iced::Length::Fill)
                 .height(iced::Length::Fill)
-                .into()
+                .into(),
         );
 
         column(contents)
@@ -124,7 +122,9 @@ impl App {
 
     pub fn update_queue(&mut self, msg: QueueMessage) -> Task<Message> {
         fn get_tracks_from_playlist(app: &App, playlist: u64) -> Vec<u64> {
-            app.playlists.get_playlist(playlist).unwrap()
+            app.playlists
+                .get_playlist(playlist)
+                .unwrap()
                 .tracks
                 .iter()
                 .map(|track| match track {
@@ -136,7 +136,7 @@ impl App {
         }
 
         fn shuffle_into_queue(queue: &mut Vec<u64>, tracks: &[u64]) {
-            use rand::{ rng, seq::SliceRandom };
+            use rand::{rng, seq::SliceRandom};
 
             queue.resize(tracks.len(), 0);
             let mut shuffle = (0..tracks.len()).collect::<Vec<usize>>();
@@ -170,49 +170,38 @@ impl App {
                 self.queue.clear();
                 match self.viewing {
                     Viewing::Library => {
-                        self.library.current_directory()
-                            .tracks[i..]
+                        self.library.current_directory().tracks[i..]
                             .iter()
-                            .for_each(|track| {
-                                self.queue.push(*track)
-                            });
+                            .for_each(|track| self.queue.push(*track));
                         if self.repeat == RepeatStatus::All {
-                            self.library.current_directory()
-                                .tracks[..i]
+                            self.library.current_directory().tracks[..i]
                                 .iter()
-                                .for_each(|track| {
-                                    self.queue.push(*track)
-                                });
+                                .for_each(|track| self.queue.push(*track));
                         }
                     }
                     Viewing::Playlist(pl) => unsafe {
                         let id = pl.unwrap_unchecked();
-                        let pl = self.playlists
-                            .get_playlist(id)
-                            .unwrap_unchecked();
+                        let pl =
+                            self.playlists.get_playlist(id).unwrap_unchecked();
                         pl.tracks[i..]
                             .iter()
                             .map(|pt| match pt {
                                 PlaylistTrack::Unresolved(_) => None,
-                                PlaylistTrack::Track(id, _) => Some(*id)
+                                PlaylistTrack::Track(id, _) => Some(*id),
                             })
                             .flatten()
-                            .for_each(|track| {
-                                self.queue.push(track)
-                            });
+                            .for_each(|track| self.queue.push(track));
                         if self.repeat == RepeatStatus::All {
                             pl.tracks[..i]
                                 .iter()
                                 .map(|pt| match pt {
                                     PlaylistTrack::Unresolved(_) => None,
-                                    PlaylistTrack::Track(id, _) => Some(*id)
+                                    PlaylistTrack::Track(id, _) => Some(*id),
                                 })
                                 .flatten()
-                                .for_each(|track| {
-                                    self.queue.push(track)
-                                });
+                                .for_each(|track| self.queue.push(track));
                         }
-                    }
+                    },
                 };
                 Task::done(Message::PlayNext)
             }
@@ -221,7 +210,7 @@ impl App {
                 Task::none()
             }
             QueueMessage::Shuffle => {
-                use rand::{ rng, seq::SliceRandom };
+                use rand::{rng, seq::SliceRandom};
 
                 self.queue.shuffle(&mut rng());
                 Task::none()
@@ -253,9 +242,8 @@ impl App {
                             return Task::none();
                         };
                         if current.as_secs() <= 1 && !self.queue.is_empty() {
-                            let last = unsafe {
-                                self.queue.pop().unwrap_unchecked()
-                            };
+                            let last =
+                                unsafe { self.queue.pop().unwrap_unchecked() };
                             self.queue.insert(0, last);
                             self.queue.insert(1, track_hash(playing));
                             Task::done(Message::PlayNext)
@@ -289,7 +277,7 @@ impl App {
                     self.queue.swap_unchecked(i, j);
                 }
                 Task::none()
-            }
+            },
         }
     }
 }

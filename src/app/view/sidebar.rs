@@ -1,7 +1,7 @@
-use super::{ *, column };
+use super::{column, *};
 
 pub struct Sidebar {
-    library_pins: Vec<(u64, String)>,
+    library_pins:  Vec<(u64, String)>,
     playlist_pins: Vec<(u64, String)>,
 }
 
@@ -26,7 +26,10 @@ impl Sidebar {
         library_pins: Vec<(u64, String)>,
         playlist_pins: Vec<(u64, String)>,
     ) -> Self {
-        Self { library_pins, playlist_pins }
+        Self {
+            library_pins,
+            playlist_pins,
+        }
     }
 
     pub fn update(&mut self, msg: SidebarMessage, config: &mut Config) {
@@ -43,7 +46,7 @@ impl Sidebar {
                     config.library.pins.swap_unchecked(i, j);
                     self.library_pins.swap_unchecked(i, j);
                 }
-            }
+            },
             SidebarMessage::PlaylistAppend(id, name) => {
                 self.playlist_pins.push((id, name));
             }
@@ -56,55 +59,43 @@ impl Sidebar {
                     config.library.pins.swap_unchecked(i, j);
                     self.playlist_pins.swap_unchecked(i, j);
                 }
-            }
+            },
         }
     }
 
     pub fn view(&self) -> Element {
         let mut contents = Vec::with_capacity(
-            self.library_pins.len() + self.playlist_pins.len() + 2
+            self.library_pins.len() + self.playlist_pins.len() + 2,
         );
-        contents.push(
-            Self::section_btn(
-                Icon::DiscAlbum,
-                " Library",
-                Message::ViewLibraryRoot
-            )
-        );
-        self.library_pins.iter()
-            .enumerate()
-            .for_each(|(i, pin)| {
-                contents.push(Self::item_btn(
-                    &pin.1,
-                    Message::ViewLibrary(pin.0),
-                    SidebarMessage::LibrarySwap(i, i.saturating_sub(1)).into(),
-                    SidebarMessage::LibrarySwap(i, i.saturating_add(1)).into(),
-                    SidebarMessage::LibraryRemove(i).into(),
-                ));
-            });
-        contents.push(
-            Self::section_btn(
-                Icon::FileMusic,
-                " Playlists",
-                Message::ViewPlaylist(None)
-            )
-        );
-        self.playlist_pins.iter()
-            .enumerate()
-            .for_each(|(i, pin)| {
-                contents.push(Self::item_btn(
-                    &pin.1,
-                    Message::ViewPlaylist(Some(pin.0)),
-                    SidebarMessage::PlaylistSwap(i, i.saturating_sub(1)).into(),
-                    SidebarMessage::PlaylistSwap(i, i.saturating_add(1)).into(),
-                    SidebarMessage::PlaylistRemove(i).into(),
-                ));
-            });
-        container(
-            scrollable(
-                column(contents)
-            )
-        )
+        contents.push(Self::section_btn(
+            Icon::DiscAlbum,
+            " Library",
+            Message::ViewLibraryRoot,
+        ));
+        self.library_pins.iter().enumerate().for_each(|(i, pin)| {
+            contents.push(Self::item_btn(
+                &pin.1,
+                Message::ViewLibrary(pin.0),
+                SidebarMessage::LibrarySwap(i, i.saturating_sub(1)).into(),
+                SidebarMessage::LibrarySwap(i, i.saturating_add(1)).into(),
+                SidebarMessage::LibraryRemove(i).into(),
+            ));
+        });
+        contents.push(Self::section_btn(
+            Icon::FileMusic,
+            " Playlists",
+            Message::ViewPlaylist(None),
+        ));
+        self.playlist_pins.iter().enumerate().for_each(|(i, pin)| {
+            contents.push(Self::item_btn(
+                &pin.1,
+                Message::ViewPlaylist(Some(pin.0)),
+                SidebarMessage::PlaylistSwap(i, i.saturating_sub(1)).into(),
+                SidebarMessage::PlaylistSwap(i, i.saturating_add(1)).into(),
+                SidebarMessage::PlaylistRemove(i).into(),
+            ));
+        });
+        container(scrollable(column(contents)))
             .style(style::bordered_container)
             .padding(1)
             .width(iced::Length::FillPortion(3))
@@ -115,7 +106,7 @@ impl Sidebar {
     fn section_btn(
         icon: Icon,
         txt: &'static str,
-        msg: Message
+        msg: Message,
     ) -> Element<'static> {
         button(
             row![
@@ -131,14 +122,14 @@ impl Sidebar {
                     .size(TEXT_SIZE)
                     .align_y(iced::Alignment::Center),
             ]
-                .height(iced::Length::Fill)
-                .align_y(iced::Alignment::Center),
+            .height(iced::Length::Fill)
+            .align_y(iced::Alignment::Center),
         )
-            .on_press(msg)
-            .width(iced::Length::Fill)
-            .height(48)
-            .style(style::outlined_button)
-            .into()
+        .on_press(msg)
+        .width(iced::Length::Fill)
+        .height(48)
+        .style(style::outlined_button)
+        .into()
     }
 
     fn item_btn(
@@ -154,15 +145,15 @@ impl Sidebar {
                     text(txt)
                         .size(TEXT_SIZE)
                         .align_y(iced::Alignment::Center)
-                        .height(iced::Length::Fill)
+                        .height(iced::Length::Fill),
                 )
-                    .style(style::list_button)
-                    .width(iced::Length::Fill)
-                    .height(iced::Length::Fill)
-                    .on_press(open_msg)
-            )
+                .style(style::list_button)
                 .width(iced::Length::Fill)
-                .height(42),
+                .height(iced::Length::Fill)
+                .on_press(open_msg),
+            )
+            .width(iced::Length::Fill)
+            .height(42),
             container(
                 row![
                     column![
@@ -187,13 +178,16 @@ impl Sidebar {
                         style: style::plain_icon_button,
                     )
                 ]
-                    .height(iced::Length::Fill)
-                    .align_y(iced::Alignment::Center)
-            )
-                .align_x(iced::Alignment::End)
-                .padding(iced::Padding { right: 5.0, ..iced::Padding::default() })
-                .width(iced::Length::Fill)
                 .height(iced::Length::Fill)
-        ) 
+                .align_y(iced::Alignment::Center),
+            )
+            .align_x(iced::Alignment::End)
+            .padding(iced::Padding {
+                right: 5.0,
+                ..iced::Padding::default()
+            })
+            .width(iced::Length::Fill)
+            .height(iced::Length::Fill),
+        )
     }
 }

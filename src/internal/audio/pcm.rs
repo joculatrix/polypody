@@ -1,4 +1,4 @@
-use symphonia::core::sample::{ i24, u24 };
+use symphonia::core::sample::{i24, u24};
 
 // FLAC and WAV samples are encoded in signed PCM format of varying depths,
 // whereas many devices accept samples in IEEE format -- floating-point numbers
@@ -35,7 +35,7 @@ pub fn pcm_s8_to_ieee(sample: i8) -> f32 {
 
 pub fn pcm_u8_to_ieee(sample: u8) -> f32 {
     const P_U8MAX_I: f32 = 2.0 / (u8::MAX as f32);
-    (sample as f32 * P_U8MAX_I) - 1.0 
+    (sample as f32 * P_U8MAX_I) - 1.0
 }
 
 pub fn pcm_s16_to_ieee(sample: i16) -> f32 {
@@ -76,22 +76,23 @@ pub fn pcm_u32_to_ieee(sample: u32) -> f32 {
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use paste::paste;
+
+    use super::*;
 
     macro_rules! test_pcm {
         ($pcm:ident, $min:expr, $max:expr) => {
-            paste!{
+            paste! {
                 #[test]
                 fn [<$pcm _max_is_correct>]() {
-                    assert!([<$pcm _to_ieee>]($max) == 1.0); 
+                    assert!([<$pcm _to_ieee>]($max) == 1.0);
                 }
             }
 
-            paste!{
+            paste! {
                 #[test]
                 fn [<$pcm _min_is_correct>]() {
-                    assert!([<$pcm _to_ieee>]($min) == -1.0); 
+                    assert!([<$pcm _to_ieee>]($min) == -1.0);
                 }
             }
         };

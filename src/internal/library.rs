@@ -1,14 +1,21 @@
-use std::{collections::HashMap, error::Error, fs::File, io::{BufReader, Write}, path::PathBuf};
+use std::{
+    collections::HashMap,
+    error::Error,
+    fs::File,
+    io::{BufReader, Write},
+    path::PathBuf,
+};
+
 use xxhash_rust::xxh3::xxh3_64;
 
-use super::{ Directory, Track };
+use super::{Directory, Track};
 
 #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
 pub struct Library {
     pub root_dir: u64,
     pub curr_dir: u64,
 
-    dir_registry: HashMap<u64, Directory>,
+    dir_registry:   HashMap<u64, Directory>,
     track_registry: HashMap<u64, Track>,
 }
 
@@ -28,9 +35,7 @@ impl Library {
         for subdir in &dir.subdirs {
             self.dir_registry
                 .entry(*subdir)
-                .and_modify(|v|
-                    v.parent = hash
-                );
+                .and_modify(|v| v.parent = hash);
         }
 
         self.dir_registry.insert(hash, dir);
@@ -84,15 +89,15 @@ impl Library {
     pub fn from_file(path: &PathBuf) -> Result<Self, Box<dyn Error>> {
         Ok(bincode::serde::decode_from_reader(
             BufReader::new(File::open(path)?),
-            bincode::config::standard()
+            bincode::config::standard(),
         )?)
     }
 
     pub fn write_to_file(&self) -> std::io::Result<()> {
         let mut f = File::create(Self::file_path()?)?;
-        let data = bincode::serde
-            ::encode_to_vec(self, bincode::config::standard())
-            .unwrap();
+        let data =
+            bincode::serde::encode_to_vec(self, bincode::config::standard())
+                .unwrap();
         f.write_all(&data)
     }
 }
