@@ -1,5 +1,11 @@
-use std::{ error::Error, fs::File, io::{Read, Write}, path::PathBuf };
-use serde::{ Deserialize, Serialize };
+use std::{
+    error::Error,
+    fs::File,
+    io::{Read, Write},
+    path::PathBuf,
+};
+
+use serde::{Deserialize, Serialize};
 
 use crate::internal::library::path_hash;
 
@@ -27,22 +33,27 @@ impl Config {
     pub fn verify_pins(self, lib: &crate::internal::Library) -> Self {
         Self {
             library: Library {
-                pins: self.library.pins
+                pins: self
+                    .library
+                    .pins
                     .into_iter()
                     .filter(|p| lib.get_directory(path_hash(p)).is_some())
                     .collect(),
                 ..self.library
             },
             playlists: Playlists {
-                pins: self.playlists.pins
+                pins: self
+                    .playlists
+                    .pins
                     .into_iter()
-                    .filter(|p|
-                        crate::exe_path().unwrap()
+                    .filter(|p| {
+                        crate::exe_path()
+                            .unwrap()
                             .join("playlists/")
                             .join(p)
                             .exists()
-                    )
-                    .collect()
+                    })
+                    .collect(),
             },
             ..self
         }
@@ -90,6 +101,8 @@ pub struct Misc {
 
 impl Default for Misc {
     fn default() -> Self {
-        Self { default_volume: 0.5 }
+        Self {
+            default_volume: 0.5,
+        }
     }
 }

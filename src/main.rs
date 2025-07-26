@@ -4,18 +4,18 @@
 #![feature(slice_as_array)]
 #![feature(slice_swap_unchecked)]
 
+use std::{path::PathBuf, time::Duration};
+
 use app::App;
 use iced::advanced::graphics::image::image_rs::ImageFormat;
-use internal::Track;
-use internal::library::{track_hash, Library};
-use std::path::PathBuf;
-use std::time::Duration;
-use symphonia::core::codecs::CodecRegistry;
-use symphonia::core::probe::Probe;
+use internal::{
+    Track,
+    library::{Library, track_hash},
+};
+use symphonia::core::{codecs::CodecRegistry, probe::Probe};
 
 pub mod app;
 pub mod internal;
-
 
 const APP_ICON: &[u8] = include_bytes!("../res/img/icon.png");
 
@@ -30,13 +30,12 @@ fn main() -> iced::Result {
             min_size: Some([1200.0, 760.0].into()),
             icon: iced::window::icon::from_file_data(
                 APP_ICON,
-                Some(ImageFormat::Png)
-            ).ok(),
+                Some(ImageFormat::Png),
+            )
+            .ok(),
             ..Default::default()
         })
-        .run_with(|| {
-            (App::new(stream_handle), iced::Task::none())
-        })
+        .run_with(|| (App::new(stream_handle), iced::Task::none()))
 }
 
 fn exe_path() -> std::io::Result<PathBuf> {

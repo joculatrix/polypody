@@ -1,24 +1,23 @@
-use super::*;
+use std::{fs::File, path::PathBuf, time::Duration};
 
-use std::fs::File;
-use std::path::PathBuf;
-use std::time::Duration;
-
-use ringbuf::traits::*;
-use ringbuf::{ HeapCons, HeapProd, HeapRb };
+use ringbuf::{HeapCons, HeapProd, HeapRb, traits::*};
 use rodio::Source;
+use symphonia::core::{
+    audio::SampleBuffer,
+    codecs::{CodecRegistry, Decoder, DecoderOptions},
+    conv::ConvertibleSample,
+    formats::{FormatOptions, FormatReader, SeekMode, SeekTo},
+    io::{MediaSourceStream, MediaSourceStreamOptions},
+    meta::{Limit, MetadataOptions},
+    probe::{Hint, Probe},
+    sample::SampleFormat,
+};
+use tokio::{
+    sync::mpsc::{self, Receiver, Sender},
+    task::JoinHandle,
+};
 
-use symphonia::core::audio::SampleBuffer;
-use symphonia::core::codecs::{ CodecRegistry, Decoder, DecoderOptions };
-use symphonia::core::conv::ConvertibleSample;
-use symphonia::core::formats::{ FormatOptions, FormatReader, SeekMode, SeekTo };
-use symphonia::core::io::{ MediaSourceStream, MediaSourceStreamOptions };
-use symphonia::core::meta::{ Limit, MetadataOptions };
-use symphonia::core::probe::{ Hint, Probe };
-use symphonia::core::sample::SampleFormat;
-
-use tokio::sync::mpsc::{ self, Receiver, Sender };
-use tokio::task::JoinHandle;
+use super::*;
 
 enum StreamMessage {
     Seek(Duration),
@@ -42,107 +41,151 @@ impl AudioStream {
         probe: &Probe,
         duration: Duration,
     ) -> Self {
-        let format = probe.format(
-            Hint::new()
-                .with_extension(path.extension().unwrap().to_str().unwrap()),
-            MediaSourceStream::new(
-                Box::new(File::open(path).unwrap()),
-                MediaSourceStreamOptions::default(),
-            ),
-            &FormatOptions {
-                seek_index_fill_rate: 5,
-                ..FormatOptions::default()
-            },
-            &MetadataOptions {
-                limit_metadata_bytes: Limit::Maximum(0), // we already have metadata
-                limit_visual_bytes: Limit::Maximum(0), // visuals currently aren't used
-            },
-        )
+        let format = probe
+            .format(
+                Hint::new().with_extension(
+                    path.extension().unwrap().to_str().unwrap(),
+                ),
+                MediaSourceStream::new(
+                    Box::new(File::open(path).unwrap()),
+                    MediaSourceStreamOptions::default(),
+                ),
+                &FormatOptions {
+                    seek_index_fill_rate: 5,
+                    ..FormatOptions::default()
+                },
+                &MetadataOptions {
+                    limit_metadata_bytes: Limit::Maximum(0), // we already have metadata
+                    limit_visual_bytes:   Limit::Maximum(0), // visuals currently aren't used
+                },
+            )
             .unwrap()
             .format;
-        let decoder = codec_registry.make(
-            &format.default_track().unwrap().codec_params,
-            &DecoderOptions::default()
-        )
+        let decoder = codec_registry
+            .make(
+                &format.default_track().unwrap().codec_params,
+                &DecoderOptions::default(),
+            )
             .unwrap();
-        
+
         let codec_params = &format.tracks()[0].codec_params;
-        let channels = codec_params.channels.unwrap().count() as u16; 
+        let channels = codec_params.channels.unwrap().count() as u16;
         let sample_rate = codec_params.sample_rate.unwrap();
-        
+
         let (prod, cons) = HeapRb::<f32>::new(RINGBUF_CAPACITY).split();
         let (tcx, rcx) = mpsc::channel(16);
 
-        let sample_format = codec_params.sample_format
-            .unwrap_or_else(|| match codec_params.bits_per_sample.unwrap_or(32) {
-                8  => SampleFormat::S8,
+        let sample_format = codec_params.sample_format.unwrap_or_else(|| {
+            match codec_params.bits_per_sample.unwrap_or(32) {
+                8 => SampleFormat::S8,
                 16 => SampleFormat::S16,
                 24 => SampleFormat::S24,
                 32 => SampleFormat::S32,
                 64 => SampleFormat::F64,
-                _  => panic!(),
-            });
+                _ => panic!(),
+            }
+        });
 
         let handle = tokio::spawn(async move {
             match sample_format {
                 SampleFormat::U8 => {
-                    let mut decoder =
-                        SymphoniaDecoder::new(decoder, format, rcx, prod,
-                            pcm_u8_to_ieee);
+                    let mut decoder = SymphoniaDecoder::new(
+                        decoder,
+                        format,
+                        rcx,
+                        prod,
+                        pcm_u8_to_ieee,
+                    );
                     decoder.run().await;
                 }
                 SampleFormat::U16 => {
-                    let mut decoder =
-                        SymphoniaDecoder::new(decoder, format, rcx, prod,
-                            pcm_u16_to_ieee);
+                    let mut decoder = SymphoniaDecoder::new(
+                        decoder,
+                        format,
+                        rcx,
+                        prod,
+                        pcm_u16_to_ieee,
+                    );
                     decoder.run().await;
                 }
                 SampleFormat::U24 => {
-                    let mut decoder =
-                        SymphoniaDecoder::new(decoder, format, rcx, prod,
-                            pcm_u24_to_ieee);
+                    let mut decoder = SymphoniaDecoder::new(
+                        decoder,
+                        format,
+                        rcx,
+                        prod,
+                        pcm_u24_to_ieee,
+                    );
                     decoder.run().await;
                 }
                 SampleFormat::U32 => {
-                    let mut decoder =
-                        SymphoniaDecoder::new(decoder, format, rcx, prod,
-                            pcm_u32_to_ieee);
+                    let mut decoder = SymphoniaDecoder::new(
+                        decoder,
+                        format,
+                        rcx,
+                        prod,
+                        pcm_u32_to_ieee,
+                    );
                     decoder.run().await;
                 }
                 SampleFormat::S8 => {
-                    let mut decoder =
-                        SymphoniaDecoder::new(decoder, format, rcx, prod,
-                            pcm_s8_to_ieee);
+                    let mut decoder = SymphoniaDecoder::new(
+                        decoder,
+                        format,
+                        rcx,
+                        prod,
+                        pcm_s8_to_ieee,
+                    );
                     decoder.run().await;
                 }
                 SampleFormat::S16 => {
-                    let mut decoder =
-                        SymphoniaDecoder::new(decoder, format, rcx, prod,
-                            pcm_s16_to_ieee);
+                    let mut decoder = SymphoniaDecoder::new(
+                        decoder,
+                        format,
+                        rcx,
+                        prod,
+                        pcm_s16_to_ieee,
+                    );
                     decoder.run().await;
                 }
                 SampleFormat::S24 => {
-                    let mut decoder =
-                        SymphoniaDecoder::new(decoder, format, rcx, prod,
-                            pcm_s24_to_ieee);
+                    let mut decoder = SymphoniaDecoder::new(
+                        decoder,
+                        format,
+                        rcx,
+                        prod,
+                        pcm_s24_to_ieee,
+                    );
                     decoder.run().await;
                 }
                 SampleFormat::S32 => {
-                    let mut decoder =
-                        SymphoniaDecoder::new(decoder, format, rcx, prod,
-                            pcm_s32_to_ieee);
+                    let mut decoder = SymphoniaDecoder::new(
+                        decoder,
+                        format,
+                        rcx,
+                        prod,
+                        pcm_s32_to_ieee,
+                    );
                     decoder.run().await;
                 }
                 SampleFormat::F32 => {
-                    let mut decoder =
-                        SymphoniaDecoder::new(decoder, format, rcx, prod,
-                            |x| x);
+                    let mut decoder = SymphoniaDecoder::new(
+                        decoder,
+                        format,
+                        rcx,
+                        prod,
+                        |x| x,
+                    );
                     decoder.run().await;
                 }
                 SampleFormat::F64 => {
-                    let mut decoder =
-                        SymphoniaDecoder::new(decoder, format, rcx, prod,
-                            |x: f64| { x as f32 });
+                    let mut decoder = SymphoniaDecoder::new(
+                        decoder,
+                        format,
+                        rcx,
+                        prod,
+                        |x: f64| x as f32,
+                    );
                     decoder.run().await;
                 }
             }
@@ -155,7 +198,7 @@ impl AudioStream {
             ring_buf_reader: cons,
             sample_rate,
             total_duration: duration,
-            tcx
+            tcx,
         }
     }
 }
@@ -195,9 +238,10 @@ impl Source for AudioStream {
         Some(self.total_duration)
     }
 
-    fn try_seek(&mut self, pos: Duration)
-        -> Result<(), rodio::source::SeekError>
-    {
+    fn try_seek(
+        &mut self,
+        pos: Duration,
+    ) -> Result<(), rodio::source::SeekError> {
         self.ring_buf_reader.clear();
         self.tcx.blocking_send(StreamMessage::Seek(pos));
         Ok(())
@@ -210,10 +254,9 @@ impl Drop for AudioStream {
     }
 }
 
-
 struct SymphoniaDecoder<S>
 where
-    S: ConvertibleSample
+    S: ConvertibleSample,
 {
     convert: fn(S) -> f32,
     inner: Box<dyn Decoder + 'static>,
@@ -237,21 +280,29 @@ impl<S: ConvertibleSample> SymphoniaDecoder<S> {
         convert: fn(S) -> f32,
     ) -> Self {
         let rcx_buf = Vec::with_capacity(16);
-        Self { convert, inner: decoder, format, rcx, rcx_buf, ring_buf_writer }
+        Self {
+            convert,
+            inner: decoder,
+            format,
+            rcx,
+            rcx_buf,
+            ring_buf_writer,
+        }
     }
 
     async fn run(&mut self) {
         loop {
             self.rcx_buf.clear();
             self.rcx.recv_many(&mut self.rcx_buf, 16).await;
-            self.rcx_buf.iter()
-                .filter_map(|msg|
+            self.rcx_buf
+                .iter()
+                .filter_map(|msg| {
                     if let StreamMessage::Seek(target) = msg {
                         Some(*target)
                     } else {
                         None
                     }
-                )
+                })
                 .last()
                 .inspect(|target| {
                     self.seek(*target);
@@ -266,43 +317,44 @@ impl<S: ConvertibleSample> SymphoniaDecoder<S> {
                         .samples()
                         .into_iter()
                         .map(|s| (self.convert)(*s));
-                    let written = self.ring_buf_writer
-                        .push_iter(samples.by_ref());
+                    let written =
+                        self.ring_buf_writer.push_iter(samples.by_ref());
                     debug_assert_eq!(written, packet_len);
                 }
-                Err(WaitErr::SeekRequested) => { continue; }
-                Err(WaitErr::ChannelClosed) => { break; }
+                Err(WaitErr::SeekRequested) => {
+                    continue;
+                }
+                Err(WaitErr::ChannelClosed) => {
+                    break;
+                }
             }
-        }    
+        }
     }
 
     fn get_packet(&mut self) -> Option<SampleBuffer<S>> {
-        let packet = self.inner
-            .decode(&self.format.next_packet().ok()?)
-            .unwrap();
+        let packet =
+            self.inner.decode(&self.format.next_packet().ok()?).unwrap();
         let spec = packet.spec();
-        let mut samples = SampleBuffer::<S>::new(
-            packet.frames() as u64,
-            *spec,
-        );
+        let mut samples = SampleBuffer::<S>::new(packet.frames() as u64, *spec);
         samples.copy_interleaved_ref(packet);
         Some(samples)
     }
 
     fn seek(&mut self, target: Duration) {
-        self.format.seek(
-            SeekMode::Accurate,
-            SeekTo::Time { time: target.into(), track_id: None },
-        );
+        self.format.seek(SeekMode::Accurate, SeekTo::Time {
+            time:     target.into(),
+            track_id: None,
+        });
     }
 
     /// Returns `WaitErr::SeekRequested` if the decoder received and handled a
     /// request to seek, `WaitErr::ChannelClosed` if the thread should abort, or
     /// `Ok(())` if the thread should go ahead and write a decoded packet to the
     /// buffer.
-    async fn wait_for_vacancy(&mut self, required_size: usize)
-        -> Result<(), WaitErr>
-    {
+    async fn wait_for_vacancy(
+        &mut self,
+        required_size: usize,
+    ) -> Result<(), WaitErr> {
         let mut vacancy = self.ring_buf_writer.vacant_len();
         while vacancy < required_size {
             tokio::select! {
@@ -327,4 +379,4 @@ impl<S: ConvertibleSample> SymphoniaDecoder<S> {
         }
         Ok(())
     }
-} 
+}
