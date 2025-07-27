@@ -169,7 +169,7 @@ impl App {
                 .iter()
                 .map(|path| {
                     (
-                        path_hash(&path),
+                        path_hash(path),
                         path.file_stem().unwrap().to_str().unwrap().to_owned(),
                     )
                 })
@@ -179,7 +179,7 @@ impl App {
                 .pins
                 .iter()
                 .map(|path| {
-                    let id = path_hash(&path);
+                    let id = path_hash(path);
                     (id, playlists.get_playlist(id).unwrap().title.to_owned())
                 })
                 .collect(),

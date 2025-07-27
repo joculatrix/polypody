@@ -153,14 +153,14 @@ impl App {
             QueueMessage::PlayFolder => {
                 let tracks = &self.library.current_directory().tracks;
                 self.queue.resize(tracks.len(), 0);
-                self.queue.copy_from_slice(&tracks);
+                self.queue.copy_from_slice(tracks);
                 Task::done(Message::PlayNext)
             }
             QueueMessage::PlayList => {
                 let Viewing::Playlist(Some(list)) = self.viewing else {
                     return Task::none();
                 };
-                let tracks = get_tracks_from_playlist(&self, list);
+                let tracks = get_tracks_from_playlist(self, list);
                 self.queue.resize(tracks.len(), 0);
                 self.queue.copy_from_slice(&tracks);
                 Task::done(Message::PlayNext)
@@ -221,7 +221,7 @@ impl App {
                 let Viewing::Playlist(Some(list)) = self.viewing else {
                     return Task::none();
                 };
-                let tracks = get_tracks_from_playlist(&self, list);
+                let tracks = get_tracks_from_playlist(self, list);
                 shuffle_into_queue(&mut self.queue, &tracks);
                 Task::done(Message::PlayNext)
             }
