@@ -10,7 +10,7 @@ use xxhash_rust::xxh3::xxh3_64;
 
 use super::{Directory, Track};
 
-#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
+#[derive(Debug, Default, Clone, serde::Deserialize, serde::Serialize)]
 pub struct Library {
     pub root_dir: u64,
     pub curr_dir: u64,
