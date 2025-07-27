@@ -59,7 +59,7 @@ impl StartScreen {
                     }
                     Err(e) => {
                         eprintln!("Error verifying existence of path: {e}");
-                        return Task::done(Message::Error);
+                        Task::done(Message::Error)
                     }
                 }
             }
