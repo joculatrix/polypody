@@ -285,10 +285,7 @@ impl App {
             .iter()
             .map(|t| match t {
                 PlaylistTrack::Track(id, _) => {
-                    match self.library.get_track(*id) {
-                        Some(track) => Some((*id, track)),
-                        None => None,
-                    }
+                    self.library.get_track(*id).map(|track| (*id, track))
                 }
                 PlaylistTrack::Unresolved(_) => None,
             })

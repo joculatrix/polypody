@@ -258,11 +258,8 @@ impl App {
                 let Some(playing) = &self.playing else {
                     return Task::none();
                 };
-                match self.repeat {
-                    RepeatStatus::All => {
-                        self.queue.push(track_hash(playing));
-                    }
-                    _ => (),
+                if self.repeat == RepeatStatus::All {
+                    self.queue.push(track_hash(playing));
                 }
                 Task::done(Message::PlayNext)
             }

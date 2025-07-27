@@ -322,33 +322,30 @@ fn scan_dir(lib: &mut Library, path_buf: PathBuf) -> Option<u64> {
         if let Err(_e) = entry {
             todo!()
         } else if let Ok(entry) = entry {
-            match entry.file_type() {
-                Ok(ft) => {
-                    if ft.is_dir() {
-                        scan_dir(lib, entry.path()).inspect(|id| {
-                            if !dir.subdirs.contains(id) {
-                                dir.subdirs.push(*id)
-                            }
-                        });
-                    } else {
-                        if lib
-                            .get_track(library::path_hash(&entry.path()))
-                            .is_some()
-                        {
-                            continue;
+            if let Ok(ft) = entry.file_type() {
+                if ft.is_dir() {
+                    scan_dir(lib, entry.path()).inspect(|id| {
+                        if !dir.subdirs.contains(id) {
+                            dir.subdirs.push(*id)
                         }
-                        match scan_file(&entry.path()) {
-                            Some(ScanResult::Image(data)) => {
-                                imgs_temp.push(data);
-                            }
-                            Some(ScanResult::Track(track)) => {
-                                tracks_temp.push(track);
-                            }
-                            None => (),
+                    });
+                } else {
+                    if lib
+                        .get_track(library::path_hash(&entry.path()))
+                        .is_some()
+                    {
+                        continue;
+                    }
+                    match scan_file(&entry.path()) {
+                        Some(ScanResult::Image(data)) => {
+                            imgs_temp.push(data);
                         }
+                        Some(ScanResult::Track(track)) => {
+                            tracks_temp.push(track);
+                        }
+                        None => (),
                     }
                 }
-                Err(_) => (),
             }
         }
     }
