@@ -1,5 +1,5 @@
 use config::Config;
-use iced::{task::Task, widget::combo_box};
+use iced::task::Task;
 use playlist::{Playlist, PlaylistMap, PlaylistTrack};
 pub use view::ICON_FONT_BYTES;
 use view::{queue, sidebar, start_screen};
@@ -157,10 +157,6 @@ impl App {
 
         let mut playlists = PlaylistMap::new();
         playlists.scan_playlists();
-
-        let add_to_playlist_state = combo_box::State::new(
-            playlists.playlists().map(|(id, _)| *id).collect(),
-        );
 
         let sink = rodio::Sink::try_new(&stream_handle).unwrap();
         let volume = config.misc.default_volume.clamp(0.0, 1.0);
