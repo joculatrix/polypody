@@ -303,7 +303,7 @@ impl<S: ConvertibleSample> SymphoniaDecoder<S> {
                         None
                     }
                 })
-                .last()
+                .next_back()
                 .inspect(|target| {
                     self.seek(*target);
                 });
@@ -315,7 +315,7 @@ impl<S: ConvertibleSample> SymphoniaDecoder<S> {
                 Ok(_) => {
                     let mut samples = sample_buf
                         .samples()
-                        .into_iter()
+                        .iter()
                         .map(|s| (self.convert)(*s));
                     let written =
                         self.ring_buf_writer.push_iter(samples.by_ref());

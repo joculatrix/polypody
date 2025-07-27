@@ -47,11 +47,11 @@ fn scan_flac(path: &PathBuf) -> Track {
     let discnum = reader
         .get_tag("DISCNUMBER")
         .next()
-        .map(|s| s.split('/').nth(0).unwrap().parse::<usize>().unwrap_or(0));
+        .map(|s| s.split('/').next().unwrap().parse::<usize>().unwrap_or(0));
     let num = reader
         .get_tag("TRACKNUMBER")
         .next()
-        .map(|s| s.split('/').nth(0).unwrap().parse::<usize>().unwrap_or(0));
+        .map(|s| s.split('/').next().unwrap().parse::<usize>().unwrap_or(0));
     let duration = {
         let stream_info = reader.streaminfo();
         Duration::from_secs(
@@ -75,7 +75,7 @@ fn scan_flac(path: &PathBuf) -> Track {
 
 fn scan_mp3(path: &PathBuf) -> Track {
     let metadata =
-        read_id3(path).unwrap_or(read_ape(path).unwrap_or(Metadata::default()));
+        read_id3(path).unwrap_or(read_ape(path).unwrap_or_default());
 
     let duration = mp3_duration::from_read(&mut File::open(path).unwrap()).ok();
     let metadata = Metadata {
@@ -124,7 +124,7 @@ fn scan_vorbis(path: &PathBuf) -> Option<Track> {
                 discnum = Some(
                     value
                         .split('/')
-                        .nth(0)
+                        .next()
                         .unwrap()
                         .parse::<usize>()
                         .unwrap_or(0),
@@ -134,7 +134,7 @@ fn scan_vorbis(path: &PathBuf) -> Option<Track> {
                 num = Some(
                     value
                         .split('/')
-                        .nth(0)
+                        .next()
                         .unwrap()
                         .parse::<usize>()
                         .unwrap_or(0),
@@ -210,7 +210,7 @@ fn get_vorbis_duration(path: &PathBuf) -> Option<u32> {
 }
 
 fn scan_wav(path: &PathBuf) -> Track {
-    let mut metadata = read_id3(path).unwrap_or(Metadata::default());
+    let mut metadata = read_id3(path).unwrap_or_default();
 
     if metadata.duration.is_none() {
         let reader = hound::WavReader::open(path).unwrap();
@@ -283,7 +283,7 @@ fn read_ape(path: &PathBuf) -> Option<Metadata> {
                 <ape::Item as TryInto<String>>::try_into(i.to_owned())
                     .unwrap()
                     .split('/')
-                    .nth(0)
+                    .next()
                     .unwrap()
                     .parse::<usize>()
                     .unwrap_or(0)
@@ -443,7 +443,7 @@ fn sort_images(imgs: Vec<PathBuf>, dir_path: &PathBuf) -> Option<PathBuf> {
             unsafe { first_alphabetical.unwrap_unchecked().to_owned() }
         })
     } else {
-        imgs.get(0).cloned()
+        imgs.first().cloned()
     }
 }
 
