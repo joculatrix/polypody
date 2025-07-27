@@ -22,9 +22,7 @@ pub fn partial_scan(path: &Path, mut lib: Library) -> Library {
 }
 
 fn scan_file(path: &PathBuf) -> Option<ScanResult> {
-    let Some(extension) = path.extension() else {
-        return None;
-    };
+    let extension = path.extension()?;
     let extension = extension.to_str().unwrap();
     match extension {
         "flac" => Some(ScanResult::Track(scan_flac(path))),
