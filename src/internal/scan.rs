@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use super::*;
 
 enum ScanResult {
@@ -5,16 +7,17 @@ enum ScanResult {
     Image(PathBuf),
 }
 
-pub fn scan(path: &PathBuf) -> Library {
+pub fn scan(path: &Path) -> Library {
     let mut lib = Library::new();
-    let root = scan_dir(&mut lib, path.clone())
-        .unwrap_or_else(|| lib.add_directory(Directory::new(path.clone())));
+    let root = scan_dir(&mut lib, path.to_path_buf()).unwrap_or_else(|| {
+        lib.add_directory(Directory::new(path.to_path_buf()))
+    });
     lib.set_root(root);
     lib
 }
 
-pub fn partial_scan(path: &PathBuf, mut lib: Library) -> Library {
-    scan_dir(&mut lib, path.clone());
+pub fn partial_scan(path: &Path, mut lib: Library) -> Library {
+    scan_dir(&mut lib, path.to_path_buf());
     lib
 }
 
@@ -373,7 +376,7 @@ fn scan_dir(lib: &mut Library, path_buf: PathBuf) -> Option<u64> {
     }
 }
 
-fn sort_tracks(tracks: &mut Vec<Track>, stable: bool) {
+fn sort_tracks(tracks: &mut [Track], stable: bool) {
     let sort = |track: &Track| {
         let path = track.path.to_str().unwrap().to_owned();
         (
@@ -395,7 +398,7 @@ fn sort_tracks(tracks: &mut Vec<Track>, stable: bool) {
     }
 }
 
-fn sort_images(imgs: Vec<PathBuf>, dir_path: &PathBuf) -> Option<PathBuf> {
+fn sort_images(imgs: Vec<PathBuf>, dir_path: &Path) -> Option<PathBuf> {
     if !imgs.is_empty() && imgs.len() != 1 {
         let mut first_alphabetical: Option<&PathBuf> = None;
         let mut matches_dir_name = None;
