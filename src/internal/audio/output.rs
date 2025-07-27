@@ -313,10 +313,8 @@ impl<S: ConvertibleSample> SymphoniaDecoder<S> {
             let packet_len = sample_buf.len();
             match self.wait_for_vacancy(packet_len).await {
                 Ok(_) => {
-                    let mut samples = sample_buf
-                        .samples()
-                        .iter()
-                        .map(|s| (self.convert)(*s));
+                    let mut samples =
+                        sample_buf.samples().iter().map(|s| (self.convert)(*s));
                     let written =
                         self.ring_buf_writer.push_iter(samples.by_ref());
                     debug_assert_eq!(written, packet_len);

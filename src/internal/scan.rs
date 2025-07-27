@@ -74,8 +74,7 @@ fn scan_flac(path: &PathBuf) -> Track {
 }
 
 fn scan_mp3(path: &PathBuf) -> Track {
-    let metadata =
-        read_id3(path).unwrap_or(read_ape(path).unwrap_or_default());
+    let metadata = read_id3(path).unwrap_or(read_ape(path).unwrap_or_default());
 
     let duration = mp3_duration::from_read(&mut File::open(path).unwrap()).ok();
     let metadata = Metadata {
@@ -194,11 +193,16 @@ fn get_vorbis_duration(path: &PathBuf) -> Option<u32> {
             let mut lo = [0; 4];
             f.read_exact(&mut lo).ok()?;
             f.read_exact(&mut hi).ok()?;
-            if matches!([&lo, &hi], [&[0xFF, 0xFF, 0xFF, 0xFF], &[
-                0xFF, 0xFF, 0xFF, 0xFF
-            ]]) {
+
+            // rustfmt makes this match macro very ugly if allowed to:
+            #[rustfmt::skip]
+            if matches!(
+                [&lo, &hi],
+                [&[0xFF, 0xFF, 0xFF, 0xFF], &[0xFF, 0xFF, 0xFF, 0xFF]]
+            ) {
                 return None;
             }
+
             if hi != [0; 4] {
                 lo = [0xFF, 0xFF, 0xFF, 0xFE];
             }
