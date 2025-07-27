@@ -163,7 +163,7 @@ impl App {
         );
 
         let sink = rodio::Sink::try_new(&stream_handle).unwrap();
-        let volume = config.misc.default_volume.min(1.0).max(0.0);
+        let volume = config.misc.default_volume.clamp(0.0, 1.0);
         sink.set_volume(volume);
 
         let sidebar = sidebar::Sidebar::new(
