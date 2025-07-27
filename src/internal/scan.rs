@@ -351,7 +351,7 @@ fn scan_dir(lib: &mut Library, path_buf: PathBuf) -> Option<u64> {
         }
     }
 
-    if tracks_temp.len() != 0 {
+    if !tracks_temp.is_empty() {
         dir.tracks
             .iter()
             .map(|t| unsafe { lib.get_track(*t).unwrap_unchecked() })

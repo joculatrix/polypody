@@ -391,7 +391,7 @@ impl App {
                 Task::none()
             }
             Message::PlayNext => {
-                if self.queue.len() == 0 {
+                if self.queue.is_empty() {
                     return Task::none();
                 }
                 let track = self.queue.remove(0);
@@ -526,7 +526,7 @@ impl App {
                 }
             }
             self.playing = None;
-            if self.queue.len() != 0 {
+            if !self.queue.is_empty() {
                 Task::done(Message::PlayNext)
             } else {
                 self.playhead_position = 0.0;
