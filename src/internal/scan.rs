@@ -318,7 +318,7 @@ fn scan_dir(lib: &mut Library, path_buf: PathBuf) -> Option<u64> {
     let mut tracks_temp = vec![];
     let mut imgs_temp = vec![];
 
-    for entry in path.read_dir().unwrap().into_iter() {
+    for entry in path.read_dir().unwrap() {
         if let Err(_e) = entry {
             todo!()
         } else if let Ok(entry) = entry {

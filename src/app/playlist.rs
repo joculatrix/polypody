@@ -47,7 +47,7 @@ impl PlaylistMap {
         if !path.exists() {
             return Ok(());
         }
-        for entry in path.read_dir().unwrap().into_iter() {
+        for entry in path.read_dir().unwrap() {
             if let Err(e) = entry {
                 eprintln!("Error reading entry: {e}");
             } else if let Ok(entry) = entry {

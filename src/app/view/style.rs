@@ -96,13 +96,13 @@ pub(super) fn plain_icon_button(
         text_color: match status {
             button::Status::Hovered => iced::Color {
                 a: 0.60,
-                ..palette.background.base.text.into()
+                ..palette.background.base.text
             },
             button::Status::Pressed => iced::Color {
                 a: 0.40,
-                ..palette.background.base.text.into()
+                ..palette.background.base.text
             },
-            _ => palette.background.base.text.into(),
+            _ => palette.background.base.text,
         },
         background: Some(palette.background.base.color.into()),
         ..button::Style::default()
@@ -143,7 +143,7 @@ pub(super) fn play_button(
             .into(),
             _ => palette.background.base.text.into(),
         }),
-        text_color: palette.background.base.color.into(),
+        text_color: palette.background.base.color,
         border: iced::Border::rounded(
             iced::Border::default(),
             CONTROL_BUTTON_SIZE / 2,
