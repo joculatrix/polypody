@@ -48,7 +48,7 @@ pub struct Track {
     pub metadata: Metadata,
 }
 
-#[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
+#[derive(Clone, Debug, Default, serde::Deserialize, serde::Serialize)]
 pub struct Metadata {
     pub title: Option<String>,
     pub artists: Vec<String>,
@@ -56,17 +56,4 @@ pub struct Metadata {
     pub discnum: Option<usize>,
     pub num: Option<usize>,
     pub duration: Option<Duration>,
-}
-
-impl Default for Metadata {
-    fn default() -> Self {
-        Self {
-            title: None,
-            artists: vec![],
-            album: None,
-            discnum: None,
-            num: None,
-            duration: None,
-        }
-    }
 }
