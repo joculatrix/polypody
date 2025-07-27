@@ -127,11 +127,10 @@ impl App {
                 .unwrap()
                 .tracks
                 .iter()
-                .map(|track| match track {
+                .filter_map(|track| match track {
                     PlaylistTrack::Track(id, _) => Some(*id),
                     _ => None,
                 })
-                .flatten()
                 .collect::<Vec<_>>()
         }
 
@@ -154,14 +153,14 @@ impl App {
             QueueMessage::PlayFolder => {
                 let tracks = &self.library.current_directory().tracks;
                 self.queue.resize(tracks.len(), 0);
-                self.queue.copy_from_slice(&tracks);
+                self.queue.copy_from_slice(tracks);
                 Task::done(Message::PlayNext)
             }
             QueueMessage::PlayList => {
                 let Viewing::Playlist(Some(list)) = self.viewing else {
                     return Task::none();
                 };
-                let tracks = get_tracks_from_playlist(&self, list);
+                let tracks = get_tracks_from_playlist(self, list);
                 self.queue.resize(tracks.len(), 0);
                 self.queue.copy_from_slice(&tracks);
                 Task::done(Message::PlayNext)
@@ -185,20 +184,18 @@ impl App {
                             self.playlists.get_playlist(id).unwrap_unchecked();
                         pl.tracks[i..]
                             .iter()
-                            .map(|pt| match pt {
+                            .filter_map(|pt| match pt {
                                 PlaylistTrack::Unresolved(_) => None,
                                 PlaylistTrack::Track(id, _) => Some(*id),
                             })
-                            .flatten()
                             .for_each(|track| self.queue.push(track));
                         if self.repeat == RepeatStatus::All {
                             pl.tracks[..i]
                                 .iter()
-                                .map(|pt| match pt {
+                                .filter_map(|pt| match pt {
                                     PlaylistTrack::Unresolved(_) => None,
                                     PlaylistTrack::Track(id, _) => Some(*id),
                                 })
-                                .flatten()
                                 .for_each(|track| self.queue.push(track));
                         }
                     },
@@ -224,7 +221,7 @@ impl App {
                 let Viewing::Playlist(Some(list)) = self.viewing else {
                     return Task::none();
                 };
-                let tracks = get_tracks_from_playlist(&self, list);
+                let tracks = get_tracks_from_playlist(self, list);
                 shuffle_into_queue(&mut self.queue, &tracks);
                 Task::done(Message::PlayNext)
             }
@@ -258,11 +255,8 @@ impl App {
                 let Some(playing) = &self.playing else {
                     return Task::none();
                 };
-                match self.repeat {
-                    RepeatStatus::All => {
-                        self.queue.push(track_hash(playing));
-                    }
-                    _ => (),
+                if self.repeat == RepeatStatus::All {
+                    self.queue.push(track_hash(playing));
                 }
                 Task::done(Message::PlayNext)
             }

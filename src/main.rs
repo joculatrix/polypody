@@ -3,6 +3,7 @@
 #![feature(seek_stream_len)]
 #![feature(slice_as_array)]
 #![feature(slice_swap_unchecked)]
+#![feature(stmt_expr_attributes)]
 #![deny(unused_imports)]
 #![deny(unused_import_braces)]
 

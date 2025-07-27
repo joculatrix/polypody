@@ -47,7 +47,7 @@ impl PlaylistMap {
         if !path.exists() {
             return Ok(());
         }
-        for entry in path.read_dir().unwrap().into_iter() {
+        for entry in path.read_dir().unwrap() {
             if let Err(e) = entry {
                 eprintln!("Error reading entry: {e}");
             } else if let Ok(entry) = entry {
@@ -112,7 +112,7 @@ impl Playlist {
 
     pub fn from_toml(toml: TomlPlaylist, filename: String) -> Self {
         let title = toml.title;
-        let img = toml.img.map(|s| PathBuf::from(s));
+        let img = toml.img.map(PathBuf::from);
         let mut tracks = Vec::with_capacity(toml.tracks.capacity());
         for track in toml.tracks {
             let track = PathBuf::from(track);

@@ -214,7 +214,7 @@ impl Iterator for AudioStream {
         }
         let res = self.ring_buf_reader.try_pop();
         if res.is_none() {
-            (!self.handle.is_finished()).then(|| 0_f32)
+            (!self.handle.is_finished()).then_some(0_f32)
         } else {
             res
         }
@@ -303,7 +303,7 @@ impl<S: ConvertibleSample> SymphoniaDecoder<S> {
                         None
                     }
                 })
-                .last()
+                .next_back()
                 .inspect(|target| {
                     self.seek(*target);
                 });
@@ -313,10 +313,8 @@ impl<S: ConvertibleSample> SymphoniaDecoder<S> {
             let packet_len = sample_buf.len();
             match self.wait_for_vacancy(packet_len).await {
                 Ok(_) => {
-                    let mut samples = sample_buf
-                        .samples()
-                        .into_iter()
-                        .map(|s| (self.convert)(*s));
+                    let mut samples =
+                        sample_buf.samples().iter().map(|s| (self.convert)(*s));
                     let written =
                         self.ring_buf_writer.push_iter(samples.by_ref());
                     debug_assert_eq!(written, packet_len);

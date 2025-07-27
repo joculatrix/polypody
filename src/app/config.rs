@@ -83,15 +83,9 @@ impl Default for Library {
     }
 }
 
-#[derive(Clone, Deserialize, Serialize)]
+#[derive(Clone, Default, Deserialize, Serialize)]
 pub struct Playlists {
     pub pins: Vec<PathBuf>,
-}
-
-impl Default for Playlists {
-    fn default() -> Self {
-        Self { pins: vec![] }
-    }
 }
 
 #[derive(Clone, Deserialize, Serialize)]

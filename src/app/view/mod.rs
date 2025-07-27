@@ -129,7 +129,7 @@ pub(self) use fill;
 impl App {
     pub fn view(&self) -> Element {
         if let Some(start) = &self.start_screen {
-            start.view().map(|s_msg| Message::StartScreen(s_msg))
+            start.view().map(Message::StartScreen)
         } else {
             self.main_screen()
         }
@@ -169,7 +169,7 @@ fn print_artists(artists: &Vec<String>) -> String {
     let mut txt = String::new();
 
     for artist in artists {
-        txt.push_str(&format!("{}, ", artist));
+        txt.push_str(&format!("{artist}, "));
     }
 
     txt.pop();
@@ -184,8 +184,8 @@ fn print_duration(duration: &std::time::Duration) -> String {
     if mins >= 100 {
         let hrs = mins / 60;
         let mins = mins % 60;
-        format!("{}:{:#02}:{:#02}", hrs, mins, secs)
+        format!("{hrs}:{mins:#02}:{secs:#02}")
     } else {
-        format!("{:#02}:{:#02}", mins, secs)
+        format!("{mins:#02}:{secs:#02}")
     }
 }

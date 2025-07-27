@@ -1,5 +1,5 @@
 use config::Config;
-use iced::{task::Task, widget::combo_box};
+use iced::task::Task;
 use playlist::{Playlist, PlaylistMap, PlaylistTrack};
 pub use view::ICON_FONT_BYTES;
 use view::{queue, sidebar, start_screen};
@@ -158,12 +158,8 @@ impl App {
         let mut playlists = PlaylistMap::new();
         playlists.scan_playlists();
 
-        let add_to_playlist_state = combo_box::State::new(
-            playlists.playlists().map(|(id, _)| *id).collect(),
-        );
-
         let sink = rodio::Sink::try_new(&stream_handle).unwrap();
-        let volume = config.misc.default_volume.min(1.0).max(0.0);
+        let volume = config.misc.default_volume.clamp(0.0, 1.0);
         sink.set_volume(volume);
 
         let sidebar = sidebar::Sidebar::new(
@@ -173,7 +169,7 @@ impl App {
                 .iter()
                 .map(|path| {
                     (
-                        path_hash(&path),
+                        path_hash(path),
                         path.file_stem().unwrap().to_str().unwrap().to_owned(),
                     )
                 })
@@ -183,7 +179,7 @@ impl App {
                 .pins
                 .iter()
                 .map(|path| {
-                    let id = path_hash(&path);
+                    let id = path_hash(path);
                     (id, playlists.get_playlist(id).unwrap().title.to_owned())
                 })
                 .collect(),
@@ -395,7 +391,7 @@ impl App {
                 Task::none()
             }
             Message::PlayNext => {
-                if self.queue.len() == 0 {
+                if self.queue.is_empty() {
                     return Task::none();
                 }
                 let track = self.queue.remove(0);
@@ -438,12 +434,10 @@ impl App {
             }
             Message::StartScreen(msg) => {
                 if let Some(start) = &mut self.start_screen {
-                    if let Some(_) = &start.lib {
+                    if start.lib.is_some() {
                         Task::done(Message::ScanDone)
                     } else {
-                        start
-                            .update(msg)
-                            .map(|s_msg| Message::StartScreen(s_msg))
+                        start.update(msg).map(Message::StartScreen)
                     }
                 } else {
                     Task::none()
@@ -501,7 +495,7 @@ impl App {
                 self.viewing = Viewing::Playlist(val);
                 self.new_playlist_menu = false;
                 self.selecting_playlist = None;
-                if let Some(_) = val {
+                if val.is_some() {
                     scrollable::scroll_to(
                         scrollable::Id::new("playlist"),
                         scrollable::AbsoluteOffset { x: 0.0, y: 0.0 },
@@ -532,7 +526,7 @@ impl App {
                 }
             }
             self.playing = None;
-            if self.queue.len() != 0 {
+            if !self.queue.is_empty() {
                 Task::done(Message::PlayNext)
             } else {
                 self.playhead_position = 0.0;

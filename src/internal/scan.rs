@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use super::*;
 
 enum ScanResult {
@@ -5,28 +7,27 @@ enum ScanResult {
     Image(PathBuf),
 }
 
-pub fn scan(path: &PathBuf) -> Library {
+pub fn scan(path: &Path) -> Library {
     let mut lib = Library::new();
-    let root = scan_dir(&mut lib, path.clone())
-        .unwrap_or_else(|| lib.add_directory(Directory::new(path.clone())));
+    let root = scan_dir(&mut lib, path.to_path_buf()).unwrap_or_else(|| {
+        lib.add_directory(Directory::new(path.to_path_buf()))
+    });
     lib.set_root(root);
     lib
 }
 
-pub fn partial_scan(path: &PathBuf, mut lib: Library) -> Library {
-    scan_dir(&mut lib, path.clone());
+pub fn partial_scan(path: &Path, mut lib: Library) -> Library {
+    scan_dir(&mut lib, path.to_path_buf());
     lib
 }
 
 fn scan_file(path: &PathBuf) -> Option<ScanResult> {
-    let Some(extension) = path.extension() else {
-        return None;
-    };
+    let extension = path.extension()?;
     let extension = extension.to_str().unwrap();
     match extension {
         "flac" => Some(ScanResult::Track(scan_flac(path))),
         "mp3" => Some(ScanResult::Track(scan_mp3(path))),
-        "ogg" => scan_vorbis(path).map(|v| ScanResult::Track(v)),
+        "ogg" => scan_vorbis(path).map(ScanResult::Track),
         "wav" | "wave" => Some(ScanResult::Track(scan_wav(path))),
         "jpg" | "jpeg" | "png" => Some(ScanResult::Image(path.to_owned())),
         _ => None,
@@ -47,11 +48,11 @@ fn scan_flac(path: &PathBuf) -> Track {
     let discnum = reader
         .get_tag("DISCNUMBER")
         .next()
-        .map(|s| s.split('/').nth(0).unwrap().parse::<usize>().unwrap_or(0));
+        .map(|s| s.split('/').next().unwrap().parse::<usize>().unwrap_or(0));
     let num = reader
         .get_tag("TRACKNUMBER")
         .next()
-        .map(|s| s.split('/').nth(0).unwrap().parse::<usize>().unwrap_or(0));
+        .map(|s| s.split('/').next().unwrap().parse::<usize>().unwrap_or(0));
     let duration = {
         let stream_info = reader.streaminfo();
         Duration::from_secs(
@@ -74,8 +75,7 @@ fn scan_flac(path: &PathBuf) -> Track {
 }
 
 fn scan_mp3(path: &PathBuf) -> Track {
-    let metadata =
-        read_id3(path).unwrap_or(read_ape(path).unwrap_or(Metadata::default()));
+    let metadata = read_id3(path).unwrap_or(read_ape(path).unwrap_or_default());
 
     let duration = mp3_duration::from_read(&mut File::open(path).unwrap()).ok();
     let metadata = Metadata {
@@ -124,7 +124,7 @@ fn scan_vorbis(path: &PathBuf) -> Option<Track> {
                 discnum = Some(
                     value
                         .split('/')
-                        .nth(0)
+                        .next()
                         .unwrap()
                         .parse::<usize>()
                         .unwrap_or(0),
@@ -134,7 +134,7 @@ fn scan_vorbis(path: &PathBuf) -> Option<Track> {
                 num = Some(
                     value
                         .split('/')
-                        .nth(0)
+                        .next()
                         .unwrap()
                         .parse::<usize>()
                         .unwrap_or(0),
@@ -167,11 +167,7 @@ fn scan_vorbis(path: &PathBuf) -> Option<Track> {
 fn get_vorbis_duration(path: &PathBuf) -> Option<u32> {
     let mut f = File::open(path).ok()?;
     let init_len = f.stream_len().ok()?;
-    let offset = if init_len > 65536 {
-        init_len - 65536
-    } else {
-        0
-    };
+    let offset = init_len.saturating_sub(65536);
     f.seek(std::io::SeekFrom::Start(offset)).ok()?;
     let mut buf = [0; 5];
     loop {
@@ -198,11 +194,16 @@ fn get_vorbis_duration(path: &PathBuf) -> Option<u32> {
             let mut lo = [0; 4];
             f.read_exact(&mut lo).ok()?;
             f.read_exact(&mut hi).ok()?;
-            if matches!([&lo, &hi], [&[0xFF, 0xFF, 0xFF, 0xFF], &[
-                0xFF, 0xFF, 0xFF, 0xFF
-            ]]) {
+
+            // rustfmt makes this match macro very ugly if allowed to:
+            #[rustfmt::skip]
+            if matches!(
+                [&lo, &hi],
+                [&[0xFF, 0xFF, 0xFF, 0xFF], &[0xFF, 0xFF, 0xFF, 0xFF]]
+            ) {
                 return None;
             }
+
             if hi != [0; 4] {
                 lo = [0xFF, 0xFF, 0xFF, 0xFE];
             }
@@ -214,7 +215,7 @@ fn get_vorbis_duration(path: &PathBuf) -> Option<u32> {
 }
 
 fn scan_wav(path: &PathBuf) -> Track {
-    let mut metadata = read_id3(path).unwrap_or(Metadata::default());
+    let mut metadata = read_id3(path).unwrap_or_default();
 
     if metadata.duration.is_none() {
         let reader = hound::WavReader::open(path).unwrap();
@@ -287,7 +288,7 @@ fn read_ape(path: &PathBuf) -> Option<Metadata> {
                 <ape::Item as TryInto<String>>::try_into(i.to_owned())
                     .unwrap()
                     .split('/')
-                    .nth(0)
+                    .next()
                     .unwrap()
                     .parse::<usize>()
                     .unwrap_or(0)
@@ -318,42 +319,39 @@ fn scan_dir(lib: &mut Library, path_buf: PathBuf) -> Option<u64> {
     let mut tracks_temp = vec![];
     let mut imgs_temp = vec![];
 
-    for entry in path.read_dir().unwrap().into_iter() {
+    for entry in path.read_dir().unwrap() {
         if let Err(_e) = entry {
             todo!()
         } else if let Ok(entry) = entry {
-            match entry.file_type() {
-                Ok(ft) => {
-                    if ft.is_dir() {
-                        scan_dir(lib, entry.path()).inspect(|id| {
-                            if !dir.subdirs.contains(id) {
-                                dir.subdirs.push(*id)
-                            }
-                        });
-                    } else {
-                        if lib
-                            .get_track(library::path_hash(&entry.path()))
-                            .is_some()
-                        {
-                            continue;
+            if let Ok(ft) = entry.file_type() {
+                if ft.is_dir() {
+                    scan_dir(lib, entry.path()).inspect(|id| {
+                        if !dir.subdirs.contains(id) {
+                            dir.subdirs.push(*id)
                         }
-                        match scan_file(&entry.path()) {
-                            Some(ScanResult::Image(data)) => {
-                                imgs_temp.push(data);
-                            }
-                            Some(ScanResult::Track(track)) => {
-                                tracks_temp.push(track);
-                            }
-                            None => (),
+                    });
+                } else {
+                    if lib
+                        .get_track(library::path_hash(&entry.path()))
+                        .is_some()
+                    {
+                        continue;
+                    }
+                    match scan_file(&entry.path()) {
+                        Some(ScanResult::Image(data)) => {
+                            imgs_temp.push(data);
                         }
+                        Some(ScanResult::Track(track)) => {
+                            tracks_temp.push(track);
+                        }
+                        None => (),
                     }
                 }
-                Err(_) => (),
             }
         }
     }
 
-    if tracks_temp.len() != 0 {
+    if !tracks_temp.is_empty() {
         dir.tracks
             .iter()
             .map(|t| unsafe { lib.get_track(*t).unwrap_unchecked() })
@@ -376,7 +374,7 @@ fn scan_dir(lib: &mut Library, path_buf: PathBuf) -> Option<u64> {
     }
 }
 
-fn sort_tracks(tracks: &mut Vec<Track>, stable: bool) {
+fn sort_tracks(tracks: &mut [Track], stable: bool) {
     let sort = |track: &Track| {
         let path = track.path.to_str().unwrap().to_owned();
         (
@@ -398,7 +396,7 @@ fn sort_tracks(tracks: &mut Vec<Track>, stable: bool) {
     }
 }
 
-fn sort_images(imgs: Vec<PathBuf>, dir_path: &PathBuf) -> Option<PathBuf> {
+fn sort_images(imgs: Vec<PathBuf>, dir_path: &Path) -> Option<PathBuf> {
     if !imgs.is_empty() && imgs.len() != 1 {
         let mut first_alphabetical: Option<&PathBuf> = None;
         let mut matches_dir_name = None;
@@ -450,7 +448,7 @@ fn sort_images(imgs: Vec<PathBuf>, dir_path: &PathBuf) -> Option<PathBuf> {
             unsafe { first_alphabetical.unwrap_unchecked().to_owned() }
         })
     } else {
-        imgs.get(0).cloned()
+        imgs.first().cloned()
     }
 }
 
