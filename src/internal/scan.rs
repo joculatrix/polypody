@@ -167,11 +167,7 @@ fn scan_vorbis(path: &PathBuf) -> Option<Track> {
 fn get_vorbis_duration(path: &PathBuf) -> Option<u32> {
     let mut f = File::open(path).ok()?;
     let init_len = f.stream_len().ok()?;
-    let offset = if init_len > 65536 {
-        init_len - 65536
-    } else {
-        0
-    };
+    let offset = init_len.saturating_sub(65536);
     f.seek(std::io::SeekFrom::Start(offset)).ok()?;
     let mut buf = [0; 5];
     loop {
