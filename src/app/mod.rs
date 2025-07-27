@@ -438,12 +438,10 @@ impl App {
             }
             Message::StartScreen(msg) => {
                 if let Some(start) = &mut self.start_screen {
-                    if let Some(_) = &start.lib {
+                    if start.lib.is_some() {
                         Task::done(Message::ScanDone)
                     } else {
-                        start
-                            .update(msg)
-                            .map(|s_msg| Message::StartScreen(s_msg))
+                        start.update(msg).map(Message::StartScreen)
                     }
                 } else {
                     Task::none()
@@ -501,7 +499,7 @@ impl App {
                 self.viewing = Viewing::Playlist(val);
                 self.new_playlist_menu = false;
                 self.selecting_playlist = None;
-                if let Some(_) = val {
+                if val.is_some() {
                     scrollable::scroll_to(
                         scrollable::Id::new("playlist"),
                         scrollable::AbsoluteOffset { x: 0.0, y: 0.0 },

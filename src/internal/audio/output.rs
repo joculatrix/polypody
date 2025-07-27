@@ -214,7 +214,7 @@ impl Iterator for AudioStream {
         }
         let res = self.ring_buf_reader.try_pop();
         if res.is_none() {
-            (!self.handle.is_finished()).then(|| 0_f32)
+            (!self.handle.is_finished()).then_some(0_f32)
         } else {
             res
         }

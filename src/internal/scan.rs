@@ -26,7 +26,7 @@ fn scan_file(path: &PathBuf) -> Option<ScanResult> {
     match extension {
         "flac" => Some(ScanResult::Track(scan_flac(path))),
         "mp3" => Some(ScanResult::Track(scan_mp3(path))),
-        "ogg" => scan_vorbis(path).map(|v| ScanResult::Track(v)),
+        "ogg" => scan_vorbis(path).map(ScanResult::Track),
         "wav" | "wave" => Some(ScanResult::Track(scan_wav(path))),
         "jpg" | "jpeg" | "png" => Some(ScanResult::Image(path.to_owned())),
         _ => None,

@@ -129,7 +129,7 @@ pub(self) use fill;
 impl App {
     pub fn view(&self) -> Element {
         if let Some(start) = &self.start_screen {
-            start.view().map(|s_msg| Message::StartScreen(s_msg))
+            start.view().map(Message::StartScreen)
         } else {
             self.main_screen()
         }
