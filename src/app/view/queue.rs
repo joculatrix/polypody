@@ -127,11 +127,10 @@ impl App {
                 .unwrap()
                 .tracks
                 .iter()
-                .map(|track| match track {
+                .filter_map(|track| match track {
                     PlaylistTrack::Track(id, _) => Some(*id),
                     _ => None,
                 })
-                .flatten()
                 .collect::<Vec<_>>()
         }
 
@@ -185,20 +184,18 @@ impl App {
                             self.playlists.get_playlist(id).unwrap_unchecked();
                         pl.tracks[i..]
                             .iter()
-                            .map(|pt| match pt {
+                            .filter_map(|pt| match pt {
                                 PlaylistTrack::Unresolved(_) => None,
                                 PlaylistTrack::Track(id, _) => Some(*id),
                             })
-                            .flatten()
                             .for_each(|track| self.queue.push(track));
                         if self.repeat == RepeatStatus::All {
                             pl.tracks[..i]
                                 .iter()
-                                .map(|pt| match pt {
+                                .filter_map(|pt| match pt {
                                     PlaylistTrack::Unresolved(_) => None,
                                     PlaylistTrack::Track(id, _) => Some(*id),
                                 })
-                                .flatten()
                                 .for_each(|track| self.queue.push(track));
                         }
                     },

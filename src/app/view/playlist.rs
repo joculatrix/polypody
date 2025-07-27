@@ -283,13 +283,12 @@ impl App {
         let mut contents = pl
             .tracks
             .iter()
-            .map(|t| match t {
+            .filter_map(|t| match t {
                 PlaylistTrack::Track(id, _) => {
                     self.library.get_track(*id).map(|track| (*id, track))
                 }
                 PlaylistTrack::Unresolved(_) => None,
             })
-            .flatten()
             .enumerate()
             .map(|(num, (id, track))| {
                 Self::track_view(track, id, num + 1, true)
