@@ -5,10 +5,8 @@ features of modern music platforms while adhering to the existing organization o
 user's music library.
 
 > [!NOTE]
-> As of right now, Polypody is very early in development. Some functionality or settings
-> might be accessible only through editing config files. Some bugs or errors might cause
-> crashes or present little or no information via the GUI. Please read the user guide or
-> submit an issue if a problem occurs.
+> Polypody is currently undergoing an overhaul, including a GUI framework migration.
+> Expect more changes soon.
 
 ## Getting Started
 
